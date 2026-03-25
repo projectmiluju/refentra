@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-sys-text font-pretendard m-0 p-0;
+  }
+}
+
+@layer utilities {
+  .text-body-ko {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  .text-nowrap {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+}
