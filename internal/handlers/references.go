@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	authsession "refentra/internal/auth"
 	"refentra/internal/models"
 
 	"github.com/labstack/echo/v4"
@@ -31,6 +32,11 @@ func (h *ReferenceHandler) GetReferences(c echo.Context) error {
 }
 
 func (h *ReferenceHandler) CreateReference(c echo.Context) error {
+	userID, ok := c.Get(authsession.ContextUserIDKey).(string)
+	if !ok || userID == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Authentication required"})
+	}
+
 	var ref models.Reference
 	if err := c.Bind(&ref); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
@@ -44,8 +50,7 @@ func (h *ReferenceHandler) CreateReference(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "URL and title are required"})
 	}
 
-	// MVP Mock Auth User
-	ref.UploaderID = "user-1234"
+	ref.UploaderID = userID
 
 	if h.DB == nil {
 		return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "Database connection is unavailable"})

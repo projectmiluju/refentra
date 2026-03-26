@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -14,7 +15,8 @@ type HealthStatusResponse struct {
 }
 
 type HealthHandler struct {
-	DB *gorm.DB
+	DB    *gorm.DB
+	Redis *redis.Client
 }
 
 func (h *HealthHandler) GetStatus(c echo.Context) error {
@@ -24,7 +26,7 @@ func (h *HealthHandler) GetStatus(c echo.Context) error {
 			Message: "데이터베이스가 준비되지 않았습니다.",
 			SetupSteps: []string{
 				"cp .env.example .env",
-				"docker compose up -d postgres",
+				"docker compose up -d postgres redis",
 				"cd frontend && npm run build",
 				"go run .",
 			},
@@ -43,6 +45,26 @@ func (h *HealthHandler) GetStatus(c echo.Context) error {
 		return c.JSON(http.StatusServiceUnavailable, HealthStatusResponse{
 			Status:  "unavailable",
 			Message: "데이터베이스 연결을 확인해 주세요.",
+		})
+	}
+
+	if h.Redis == nil {
+		return c.JSON(http.StatusServiceUnavailable, HealthStatusResponse{
+			Status:  "unavailable",
+			Message: "Redis가 준비되지 않았습니다.",
+			SetupSteps: []string{
+				"cp .env.example .env",
+				"docker compose up -d postgres redis",
+				"cd frontend && npm run build",
+				"go run .",
+			},
+		})
+	}
+
+	if err := h.Redis.Ping(c.Request().Context()).Err(); err != nil {
+		return c.JSON(http.StatusServiceUnavailable, HealthStatusResponse{
+			Status:  "unavailable",
+			Message: "Redis 연결을 확인해 주세요.",
 		})
 	}
 

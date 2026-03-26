@@ -1,20 +1,30 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import { LOGIN_TEXT } from '../constants/uiText';
-import { persistAuthSession } from '../lib/auth';
+import { login } from '../lib/auth';
 
-const Login: React.FC = () => {
+interface LoginProps {
+  sessionMessage: string;
+  onLoginSuccess: () => void;
+}
+
+const Login: React.FC<LoginProps> = ({ sessionMessage, onLoginSuccess }) => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState(sessionMessage);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const emailInputId = 'login-email';
   const passwordInputId = 'login-password';
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    setErrorMessage(sessionMessage);
+  }, [sessionMessage]);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const trimmedEmail = email.trim();
@@ -29,9 +39,25 @@ const Login: React.FC = () => {
       return;
     }
 
-    persistAuthSession();
-    setErrorMessage('');
-    navigate('/dashboard');
+    try {
+      setIsSubmitting(true);
+      await login({
+        email: trimmedEmail,
+        password: password.trim(),
+      });
+      setErrorMessage('');
+      onLoginSuccess();
+      navigate('/dashboard');
+    } catch (error) {
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+        return;
+      }
+
+      setErrorMessage(LOGIN_TEXT.invalidCredentials);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -51,8 +77,14 @@ const Login: React.FC = () => {
               type="email" 
               placeholder="name@company.com" 
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                if (errorMessage) {
+                  setErrorMessage('');
+                }
+              }}
               isError={errorMessage === LOGIN_TEXT.invalidEmail}
+              disabled={isSubmitting}
               required
             />
           </div>
@@ -66,8 +98,14 @@ const Login: React.FC = () => {
               type="password" 
               placeholder="••••••••" 
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              isError={errorMessage === LOGIN_TEXT.emptyPassword}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                if (errorMessage) {
+                  setErrorMessage('');
+                }
+              }}
+              isError={errorMessage === LOGIN_TEXT.emptyPassword || errorMessage === LOGIN_TEXT.invalidCredentials}
+              disabled={isSubmitting}
               required
             />
           </div>
@@ -78,8 +116,8 @@ const Login: React.FC = () => {
             </p>
           ) : null}
 
-          <Button type="submit" size="lg" fullWidth className="mt-4">
-            {LOGIN_TEXT.submit}
+          <Button type="submit" size="lg" fullWidth className="mt-4" isLoading={isSubmitting}>
+            {isSubmitting ? LOGIN_TEXT.submitting : LOGIN_TEXT.submit}
           </Button>
         </form>
 

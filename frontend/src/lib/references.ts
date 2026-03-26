@@ -1,4 +1,5 @@
 import type { ReferenceDraft, ReferenceItem, ReferenceResponse } from '../types/reference';
+import { fetchWithAuth } from './auth';
 
 const REFERENCE_API_PATH = '/api/v1/references';
 
@@ -30,7 +31,7 @@ export const mapReferenceResponse = (reference: ReferenceResponse): ReferenceIte
 });
 
 export const fetchReferences = async (): Promise<ReferenceItem[]> => {
-  const response = await fetch(REFERENCE_API_PATH);
+  const response = await fetchWithAuth(REFERENCE_API_PATH);
 
   if (!response.ok) {
     throw new Error(await toErrorMessage(response, '레퍼런스를 불러오지 못했습니다.'));
@@ -41,7 +42,7 @@ export const fetchReferences = async (): Promise<ReferenceItem[]> => {
 };
 
 export const createReference = async (draft: ReferenceDraft): Promise<ReferenceItem> => {
-  const response = await fetch(REFERENCE_API_PATH, {
+  const response = await fetchWithAuth(REFERENCE_API_PATH, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

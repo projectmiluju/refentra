@@ -8,11 +8,16 @@ import { DASHBOARD_TEXT } from '../constants/uiText';
 import type { ReferenceDraft, ReferenceItem } from '../types/reference';
 import { createReference, fetchReferences } from '../lib/references';
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onLoggedOut: () => Promise<void>;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [references, setReferences] = useState<ReferenceItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const loadReferences = async (): Promise<void> => {
     try {
@@ -42,6 +47,15 @@ const Dashboard: React.FC = () => {
     setIsModalOpen(false);
   };
 
+  const handleLogout = async (): Promise<void> => {
+    try {
+      setIsLoggingOut(true);
+      await onLoggedOut();
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
   return (
     <div className="flex h-screen w-full bg-background text-sys-text">
       {/* Sidebar */}
@@ -69,7 +83,12 @@ const Dashboard: React.FC = () => {
         {/* Header */}
         <header className="h-20 border-b border-slate-800 flex items-center justify-between px-8 shrink-0 bg-background/80 backdrop-blur-md">
           <h1 className="text-2xl font-pretendard font-semibold">{DASHBOARD_TEXT.title}</h1>
-          <Button onClick={() => setIsModalOpen(true)}>{DASHBOARD_TEXT.addReference}</Button>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={() => { void handleLogout(); }} isLoading={isLoggingOut}>
+              {DASHBOARD_TEXT.logout}
+            </Button>
+            <Button onClick={() => setIsModalOpen(true)}>{DASHBOARD_TEXT.addReference}</Button>
+          </div>
         </header>
 
         {/* List Content */}
@@ -93,6 +112,14 @@ const Dashboard: React.FC = () => {
             <div className="bg-surface p-6 rounded-xl border border-slate-800 flex flex-col gap-2">
               <h3 className="text-xl font-pretendard font-bold">{DASHBOARD_TEXT.emptyTitle}</h3>
               <p className="text-body-ko text-slate-300">{DASHBOARD_TEXT.emptyDescription}</p>
+              <div className="mt-3">
+                <h4 className="text-sm font-medium text-text-muted mb-2">{DASHBOARD_TEXT.onboardingChecklistTitle}</h4>
+                <ul className="flex flex-col gap-2 text-body-ko text-slate-300 list-disc pl-5">
+                  {DASHBOARD_TEXT.onboardingSteps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
           ) : null}
 

@@ -1,22 +1,29 @@
-export const AUTH_STORAGE_KEY = 'refentra:isAuthenticated';
-
 export const LOGIN_TEXT = {
   brand: 'Refentra',
   emailLabel: '이메일 주소',
   passwordLabel: '비밀번호',
   forgotPassword: '비밀번호를 잊으셨나요?',
   submit: '로그인',
+  submitting: '로그인 중...',
   invalidEmail: '올바른 이메일 주소를 입력해 주세요.',
   emptyPassword: '비밀번호를 입력해 주세요.',
+  invalidCredentials: '이메일 또는 비밀번호가 올바르지 않습니다.',
 } as const;
 
 export const DASHBOARD_TEXT = {
   title: '아카이브 (Archive)',
   addReference: '새 레퍼런스 추가',
+  logout: '로그아웃',
   searchPlaceholder: '레퍼런스 검색...',
   loading: '레퍼런스를 불러오는 중...',
-  emptyTitle: '아직 저장된 레퍼런스가 없습니다.',
-  emptyDescription: '첫 레퍼런스를 추가해 아카이브를 시작해 보세요.',
+  emptyTitle: '첫 아카이브를 시작해 보세요.',
+  emptyDescription: '아직 저장된 레퍼런스가 없습니다. 첫 레퍼런스를 추가하면 팀 아카이브가 채워지기 시작합니다.',
+  onboardingChecklistTitle: '처음 시작할 때 추천하는 순서',
+  onboardingSteps: [
+    '오른쪽 상단의 새 레퍼런스 추가 버튼을 누릅니다.',
+    '제목과 URL을 입력하고 팀이 이해할 수 있는 설명을 남깁니다.',
+    '검색이 쉬워지도록 태그를 붙여 저장합니다.',
+  ],
   retry: '다시 시도',
   loadErrorFallback: '레퍼런스를 불러오지 못했습니다.',
 } as const;
@@ -42,6 +49,7 @@ export const REFERENCE_MODAL_TEXT = {
 
 export const APP_TEXT = {
   booting: '개발 환경을 확인하는 중...',
+  authChecking: '로그인 상태를 확인하는 중...',
 } as const;
 
 export const SETUP_GUIDE_TEXT = {
