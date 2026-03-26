@@ -50,6 +50,7 @@ describe('Dashboard', () => {
     fetchMock
       .mockResolvedValueOnce({
         ok: false,
+        status: 500,
         json: async () => ({ error: 'DB 연결 실패' }),
       })
       .mockResolvedValueOnce({
@@ -169,5 +170,18 @@ describe('Dashboard', () => {
     });
 
     expect(await screen.findByText('새 문서')).toBeInTheDocument();
+  });
+
+  it('DB 미연결이면 설정 가이드용 메시지를 표시해야 한다', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      json: async () => ({ error: 'Database connection is unavailable' }),
+    });
+
+    render(<Dashboard />);
+
+    expect(await screen.findByText('Database connection is unavailable')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument();
   });
 });

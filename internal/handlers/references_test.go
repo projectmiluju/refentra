@@ -9,7 +9,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func TestGetReferencesWithoutDatabaseReturnsEmptyArray(t *testing.T) {
+func TestGetReferencesWithoutDatabaseReturnsServiceUnavailable(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/references", nil)
 	rec := httptest.NewRecorder()
@@ -21,12 +21,13 @@ func TestGetReferencesWithoutDatabaseReturnsEmptyArray(t *testing.T) {
 		t.Fatalf("GetReferences returned error: %v", err)
 	}
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", rec.Code)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected status 503, got %d", rec.Code)
 	}
 
-	if rec.Body.String() != "[]\n" {
-		t.Fatalf("expected empty array response, got %s", rec.Body.String())
+	expected := `{"error":"Database connection is unavailable"}`
+	if rec.Body.String() != expected+"\n" {
+		t.Fatalf("expected body %s, got %s", expected, rec.Body.String())
 	}
 }
 
@@ -54,7 +55,7 @@ func TestCreateReferenceRejectsMissingRequiredFields(t *testing.T) {
 	}
 }
 
-func TestCreateReferenceReturnsCreatedReferenceWithoutDatabase(t *testing.T) {
+func TestCreateReferenceWithoutDatabaseReturnsServiceUnavailable(t *testing.T) {
 	e := echo.New()
 	body := bytes.NewBufferString(`{"url":"https://example.com","title":"문서","description":"설명","tags":["Go"]}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/references", body)
@@ -68,15 +69,12 @@ func TestCreateReferenceReturnsCreatedReferenceWithoutDatabase(t *testing.T) {
 		t.Fatalf("CreateReference returned error: %v", err)
 	}
 
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("expected status 201, got %d", rec.Code)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected status 503, got %d", rec.Code)
 	}
 
-	bodyText := rec.Body.String()
-	if !bytes.Contains([]byte(bodyText), []byte(`"uploader_id":"user-1234"`)) {
-		t.Fatalf("expected uploader_id in response, got %s", bodyText)
-	}
-	if !bytes.Contains([]byte(bodyText), []byte(`"title":"문서"`)) {
-		t.Fatalf("expected title in response, got %s", bodyText)
+	expected := `{"error":"Database connection is unavailable"}`
+	if rec.Body.String() != expected+"\n" {
+		t.Fatalf("expected body %s, got %s", expected, rec.Body.String())
 	}
 }
