@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	authsession "refentra/internal/auth"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -14,6 +16,7 @@ func TestGetReferencesWithoutDatabaseReturnsServiceUnavailable(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/references", nil)
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
+	ctx.Set(authsession.ContextUserIDKey, "user-1234")
 
 	handler := &ReferenceHandler{}
 
@@ -38,6 +41,7 @@ func TestCreateReferenceRejectsMissingRequiredFields(t *testing.T) {
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
+	ctx.Set(authsession.ContextUserIDKey, "user-1234")
 
 	handler := &ReferenceHandler{}
 
@@ -62,6 +66,7 @@ func TestCreateReferenceWithoutDatabaseReturnsServiceUnavailable(t *testing.T) {
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
+	ctx.Set(authsession.ContextUserIDKey, "user-1234")
 
 	handler := &ReferenceHandler{}
 

@@ -2,13 +2,11 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
-import { AUTH_STORAGE_KEY } from './constants/uiText';
 
 describe('App', () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
-    window.localStorage.clear();
     window.history.pushState({}, '', '/login');
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
@@ -22,6 +20,20 @@ describe('App', () => {
         json: async () => ({ status: 'ready', message: 'ok' }),
       })
       .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Authentication required' }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ code: 'AUTH_REQUIRED', error: 'Authentication required' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'user-1234', name: '김개발', email: 'dev@refentra.com' }),
+      })
+      .mockResolvedValueOnce({
         ok: true,
         json: async () => [],
       });
@@ -33,7 +45,6 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: '로그인' }));
 
     expect(await screen.findByRole('heading', { name: '아카이브 (Archive)' })).toBeInTheDocument();
-    expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBe('true');
   });
 
   it('잘못된 이메일로 로그인하면 에러 메시지를 보여주고 이동하지 않아야 한다', async () => {
@@ -41,6 +52,14 @@ describe('App', () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ status: 'ready', message: 'ok' }),
+    }).mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: 'Authentication required' }),
+    }).mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: async () => ({ code: 'AUTH_REQUIRED', error: 'Authentication required' }),
     });
 
     render(<App />);

@@ -27,7 +27,7 @@ describe('Dashboard', () => {
       ]),
     });
 
-    render(<Dashboard />);
+    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
 
     expect(screen.getByText('레퍼런스를 불러오는 중...')).toBeInTheDocument();
     expect(await screen.findByText('서버 문서')).toBeInTheDocument();
@@ -40,10 +40,10 @@ describe('Dashboard', () => {
       json: async () => [],
     });
 
-    render(<Dashboard />);
+    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
 
-    expect(await screen.findByText('아직 저장된 레퍼런스가 없습니다.')).toBeInTheDocument();
-    expect(screen.getByText('첫 레퍼런스를 추가해 아카이브를 시작해 보세요.')).toBeInTheDocument();
+    expect(await screen.findByText('첫 아카이브를 시작해 보세요.')).toBeInTheDocument();
+    expect(screen.getByText('처음 시작할 때 추천하는 순서')).toBeInTheDocument();
   });
 
   it('조회 실패 시 에러 메시지와 다시 시도 버튼을 표시해야 한다', async () => {
@@ -60,13 +60,13 @@ describe('Dashboard', () => {
 
     const user = userEvent.setup();
 
-    render(<Dashboard />);
+    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
 
     expect(await screen.findByText('DB 연결 실패')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '다시 시도' }));
 
-    expect(await screen.findByText('아직 저장된 레퍼런스가 없습니다.')).toBeInTheDocument();
+    expect(await screen.findByText('첫 아카이브를 시작해 보세요.')).toBeInTheDocument();
   });
 
   it('저장 성공 시 서버 응답 기준으로 목록 상단에 레퍼런스를 추가해야 한다', async () => {
@@ -90,9 +90,9 @@ describe('Dashboard', () => {
 
     const user = userEvent.setup();
 
-    render(<Dashboard />);
+    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
 
-    await screen.findByText('아직 저장된 레퍼런스가 없습니다.');
+    await screen.findByText('첫 아카이브를 시작해 보세요.');
     await user.click(screen.getByRole('button', { name: '새 레퍼런스 추가' }));
     await user.type(screen.getByLabelText('URL 주소'), 'https://example.com/new');
     await user.type(screen.getByLabelText('레퍼런스 제목 (Title)'), '새 문서');
@@ -117,9 +117,9 @@ describe('Dashboard', () => {
 
     const user = userEvent.setup();
 
-    render(<Dashboard />);
+    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
 
-    await screen.findByText('아직 저장된 레퍼런스가 없습니다.');
+    await screen.findByText('첫 아카이브를 시작해 보세요.');
     await user.click(screen.getByRole('button', { name: '새 레퍼런스 추가' }));
     await user.type(screen.getByLabelText('URL 주소'), 'https://example.com/new');
     await user.type(screen.getByLabelText('레퍼런스 제목 (Title)'), '새 문서');
@@ -143,9 +143,9 @@ describe('Dashboard', () => {
 
     const user = userEvent.setup();
 
-    render(<Dashboard />);
+    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
 
-    await screen.findByText('아직 저장된 레퍼런스가 없습니다.');
+    await screen.findByText('첫 아카이브를 시작해 보세요.');
     await user.click(screen.getByRole('button', { name: '새 레퍼런스 추가' }));
     await user.type(screen.getByLabelText('URL 주소'), 'https://example.com/new');
     await user.type(screen.getByLabelText('레퍼런스 제목 (Title)'), '새 문서');
@@ -179,7 +179,7 @@ describe('Dashboard', () => {
       json: async () => ({ error: 'Database connection is unavailable' }),
     });
 
-    render(<Dashboard />);
+    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
 
     expect(await screen.findByText('Database connection is unavailable')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument();
