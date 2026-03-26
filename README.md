@@ -66,6 +66,7 @@ go run .
 ### 데모 데이터
 - PostgreSQL 컨테이너 첫 생성 시 mock 사용자 `user-1234`와 데모 레퍼런스 3개가 1회만 주입됩니다.
 - 컨테이너를 껐다 켜도 기존 volume이 유지되면 데이터는 다시 주입되지 않습니다.
+- 현재 로그인은 여전히 mock 세션 기반이며, 데모 사용자는 실제 인증 계정이 아니라 저장/조회 흐름 검증용 기준 데이터입니다.
 
 ### 재초기화
 데모 데이터를 처음 상태로 되돌리려면 volume까지 삭제해야 합니다.
@@ -108,7 +109,10 @@ docker compose up -d postgres
 - 백엔드: Go 1.26, Echo, GORM
 - 데이터베이스: PostgreSQL 16 (Docker Compose)
 
-관련 배경은 [PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.md)를 기준으로 합니다.
+관련 배경:
+- [제품 기본 PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.md)
+- [저장/조회 연동 PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.1-reference-persistence.md)
+- [로컬 Docker Postgres PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.2-local-dev-docker-postgres.md)
 
 ## 스크립트
 `frontend/package.json` 기준:
