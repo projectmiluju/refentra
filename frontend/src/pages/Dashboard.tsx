@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -6,28 +6,38 @@ import TagBadge from '../components/common/TagBadge';
 import AddReferenceModal from '../components/modal/AddReferenceModal';
 import { DASHBOARD_TEXT } from '../constants/uiText';
 import type { ReferenceDraft, ReferenceItem } from '../types/reference';
-
-// Dummy data for visual
-const mockReferences: ReferenceItem[] = [
-  { id: 1, title: 'React 19 Hooks Guide', url: 'https://react.dev/reference', description: '공식 문서에 추가된 새로운 훅 기능들 요약 및 예제 모음.', tags: ['React', 'Frontend'], uploader: '김개발', date: '2026-03-25' },
-  { id: 2, title: 'Go Echo Architecture', url: 'https://echo.labstack.com/guide', description: '프로덕션 레벨의 Echo 라우팅 및 미들웨어 설정 방식.', tags: ['Go', 'Backend'], uploader: '이벡엔', date: '2026-03-24' },
-];
+import { createReference, fetchReferences } from '../lib/references';
 
 const Dashboard: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [references, setReferences] = useState<ReferenceItem[]>(mockReferences);
+  const [references, setReferences] = useState<ReferenceItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  const handleCreateReference = (draft: ReferenceDraft) => {
-    const nextReference: ReferenceItem = {
-      id: Date.now(),
-      title: draft.title,
-      url: draft.url,
-      description: draft.description,
-      tags: draft.tags,
-      uploader: '김개발',
-      date: new Date().toISOString().slice(0, 10),
-    };
+  const loadReferences = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setLoadError('');
+      const nextReferences = await fetchReferences();
+      setReferences(nextReferences);
+    } catch (error) {
+      if (error instanceof Error) {
+        setLoadError(error.message);
+        return;
+      }
 
+      setLoadError(DASHBOARD_TEXT.loadErrorFallback);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadReferences();
+  }, []);
+
+  const handleCreateReference = async (draft: ReferenceDraft): Promise<void> => {
+    const nextReference = await createReference(draft);
     setReferences((currentReferences) => [nextReference, ...currentReferences]);
     setIsModalOpen(false);
   };
@@ -64,19 +74,41 @@ const Dashboard: React.FC = () => {
 
         {/* List Content */}
         <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-4">
-          {references.map(ref => (
+          {isLoading ? (
+            <div className="bg-surface p-6 rounded-xl border border-slate-800 text-body-ko text-slate-300">
+              {DASHBOARD_TEXT.loading}
+            </div>
+          ) : null}
+
+          {!isLoading && loadError ? (
+            <div className="bg-surface p-6 rounded-xl border border-error flex flex-col items-start gap-4">
+              <p className="text-body-ko text-error">{loadError}</p>
+              <Button type="button" onClick={() => { void loadReferences(); }}>
+                {DASHBOARD_TEXT.retry}
+              </Button>
+            </div>
+          ) : null}
+
+          {!isLoading && !loadError && references.length === 0 ? (
+            <div className="bg-surface p-6 rounded-xl border border-slate-800 flex flex-col gap-2">
+              <h3 className="text-xl font-pretendard font-bold">{DASHBOARD_TEXT.emptyTitle}</h3>
+              <p className="text-body-ko text-slate-300">{DASHBOARD_TEXT.emptyDescription}</p>
+            </div>
+          ) : null}
+
+          {!isLoading && !loadError ? references.map((ref) => (
             <div key={ref.id} className="bg-surface p-6 rounded-xl border border-slate-800 hover:border-slate-600 transition-colors">
               <h3 className="text-xl font-pretendard font-bold mb-1">{ref.title}</h3>
               <a href={ref.url} target="_blank" rel="noreferrer" className="text-text-muted text-sm text-nowrap hover:text-primary transition-colors block mb-3">
                 {ref.url}
               </a>
               <p className="text-body-ko text-slate-300 mb-4 line-clamp-2">
-                {ref.description}
+                {ref.description || '-'}
               </p>
-              
+
               <div className="flex items-center justify-between mt-auto">
                 <div className="flex gap-2">
-                  {ref.tags.map(t => <TagBadge key={t} label={t} />)}
+                  {ref.tags.map((tag) => <TagBadge key={tag} label={tag} />)}
                 </div>
                 <div className="text-sm text-text-muted font-jetbrains space-x-3">
                   <span>{ref.uploader}</span>
@@ -84,7 +116,7 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
             </div>
-          ))}
+          )) : null}
 
           {/* Pagination (Visual) */}
           <div className="mt-8 flex items-center justify-center gap-2">

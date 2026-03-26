@@ -7,7 +7,7 @@ import type { ReferenceDraft } from '../../types/reference';
 
 interface AddReferenceModalProps {
   onClose: () => void;
-  onSave: (draft: ReferenceDraft) => void;
+  onSave: (draft: ReferenceDraft) => Promise<void>;
 }
 
 const AddReferenceModal: React.FC<AddReferenceModalProps> = ({ onClose, onSave }) => {
@@ -17,6 +17,7 @@ const AddReferenceModal: React.FC<AddReferenceModalProps> = ({ onClose, onSave }
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const urlInputId = 'reference-url';
   const titleInputId = 'reference-title';
@@ -38,7 +39,7 @@ const AddReferenceModal: React.FC<AddReferenceModalProps> = ({ onClose, onSave }
     setTags(tags.filter(t => t !== tagToRemove));
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const trimmedUrl = url.trim();
@@ -61,13 +62,25 @@ const AddReferenceModal: React.FC<AddReferenceModalProps> = ({ onClose, onSave }
       return;
     }
 
-    onSave({
-      url: trimmedUrl,
-      title: trimmedTitle,
-      description: description.trim(),
-      tags,
-    });
-    setErrorMessage('');
+    try {
+      setIsSubmitting(true);
+      await onSave({
+        url: trimmedUrl,
+        title: trimmedTitle,
+        description: description.trim(),
+        tags,
+      });
+      setErrorMessage('');
+    } catch (error) {
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+        return;
+      }
+
+      setErrorMessage(REFERENCE_MODAL_TEXT.saveErrorFallback);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -85,6 +98,7 @@ const AddReferenceModal: React.FC<AddReferenceModalProps> = ({ onClose, onSave }
               value={url}
               onChange={(event) => setUrl(event.target.value)}
               isError={errorMessage === REFERENCE_MODAL_TEXT.emptyUrl || errorMessage === REFERENCE_MODAL_TEXT.invalidUrl}
+              disabled={isSubmitting}
               required
             />
           </div>
@@ -98,6 +112,7 @@ const AddReferenceModal: React.FC<AddReferenceModalProps> = ({ onClose, onSave }
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               isError={errorMessage === REFERENCE_MODAL_TEXT.emptyTitle}
+              disabled={isSubmitting}
               required
             />
           </div>
@@ -110,6 +125,7 @@ const AddReferenceModal: React.FC<AddReferenceModalProps> = ({ onClose, onSave }
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               placeholder={REFERENCE_MODAL_TEXT.descriptionPlaceholder}
+              disabled={isSubmitting}
               className="w-full px-4 py-3 bg-[#060E20] text-sys-text font-pretendard rounded-lg border border-slate-700 focus:border-primary placeholder-text-muted outline-none transition-colors resize-none"
             ></textarea>
           </div>
@@ -128,6 +144,7 @@ const AddReferenceModal: React.FC<AddReferenceModalProps> = ({ onClose, onSave }
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={handleAddTag}
+              disabled={isSubmitting}
             />
           </div>
 
@@ -138,8 +155,8 @@ const AddReferenceModal: React.FC<AddReferenceModalProps> = ({ onClose, onSave }
           ) : null}
 
           <div className="flex justify-end gap-3 mt-4">
-            <Button type="button" variant="ghost" onClick={onClose}>{REFERENCE_MODAL_TEXT.cancel}</Button>
-            <Button type="submit">{REFERENCE_MODAL_TEXT.submit}</Button>
+            <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>{REFERENCE_MODAL_TEXT.cancel}</Button>
+            <Button type="submit" isLoading={isSubmitting}>{isSubmitting ? REFERENCE_MODAL_TEXT.submitting : REFERENCE_MODAL_TEXT.submit}</Button>
           </div>
         </form>
       </div>

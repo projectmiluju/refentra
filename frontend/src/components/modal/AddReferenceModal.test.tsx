@@ -7,7 +7,7 @@ describe('AddReferenceModal', () => {
   it('태그 입력 후 Enter를 누르면 중복 없이 태그를 추가해야 한다', async () => {
     const user = userEvent.setup();
 
-    render(<AddReferenceModal onClose={vi.fn()} onSave={vi.fn()} />);
+    render(<AddReferenceModal onClose={vi.fn()} onSave={vi.fn().mockResolvedValue(undefined)} />);
 
     const tagInput = screen.getByLabelText('태그 (Tags)');
     await user.type(tagInput, 'Infra{enter}');
@@ -18,7 +18,7 @@ describe('AddReferenceModal', () => {
 
   it('필수값이 유효하면 저장 콜백에 정제된 값을 전달해야 한다', async () => {
     const user = userEvent.setup();
-    const handleSave = vi.fn();
+    const handleSave = vi.fn().mockResolvedValue(undefined);
 
     render(<AddReferenceModal onClose={vi.fn()} onSave={handleSave} />);
 
@@ -33,5 +33,20 @@ describe('AddReferenceModal', () => {
       description: '설명입니다.',
       tags: ['Frontend', 'Design'],
     });
+  });
+
+  it('저장 실패 시 입력값을 유지하고 에러 메시지를 표시해야 한다', async () => {
+    const user = userEvent.setup();
+    const handleSave = vi.fn().mockRejectedValue(new Error('저장 실패'));
+
+    render(<AddReferenceModal onClose={vi.fn()} onSave={handleSave} />);
+
+    await user.type(screen.getByLabelText('URL 주소'), 'https://example.com/article');
+    await user.type(screen.getByLabelText('레퍼런스 제목 (Title)'), '테스트 문서');
+    await user.click(screen.getByRole('button', { name: '저장하기' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('저장 실패');
+    expect(screen.getByLabelText('URL 주소')).toHaveValue('https://example.com/article');
+    expect(screen.getByLabelText('레퍼런스 제목 (Title)')).toHaveValue('테스트 문서');
   });
 });
