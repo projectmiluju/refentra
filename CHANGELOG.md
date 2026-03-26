@@ -1,5 +1,24 @@
 # Changelog
 
+## [Unreleased]
+
+### 추가
+- Redis 기반 실제 세션 인증 추가
+- `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me` 추가
+- `internal/auth` 패키지로 JWT 쿠키, Refresh Token 저장소, 인증 미들웨어 분리
+- 첫 로그인 후 0건일 때 온보딩 가이드 표시 추가
+
+### 수정
+- 프론트 인증 상태를 `localStorage` 플래그에서 서버 세션 확인 방식으로 전환
+- 보호된 `references` API가 인증 사용자 기준으로만 동작하도록 정리
+- `health` 체크에 Redis 준비 상태를 포함
+- Docker Compose가 PostgreSQL과 Redis를 함께 띄우도록 변경
+
+### 테스트
+- 쿠키 기반 로그인, 보호 라우트, 보호 API, Refresh Token 회전, 로그아웃 무효화 검증 추가
+- 잘못된 비밀번호 로그인 거부와 라이브 인증 플로우 QA 확인
+- 알려진 이슈: 브라우저 E2E 자동화는 아직 없음
+
 ## [v0.4.0] - 2026-03-27
 
 ### 추가
