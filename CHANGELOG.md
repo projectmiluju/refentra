@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v0.4.0] - 2026-03-27
 
 ### 추가
 - Docker Compose 기반 로컬 PostgreSQL 개발 환경 추가
