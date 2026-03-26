@@ -2,20 +2,33 @@ import React, { useState } from 'react';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import TagBadge from '../common/TagBadge';
+import { REFERENCE_MODAL_TEXT } from '../../constants/uiText';
+import type { ReferenceDraft } from '../../types/reference';
 
 interface AddReferenceModalProps {
   onClose: () => void;
+  onSave: (draft: ReferenceDraft) => void;
 }
 
-const AddReferenceModal: React.FC<AddReferenceModalProps> = ({ onClose }) => {
+const AddReferenceModal: React.FC<AddReferenceModalProps> = ({ onClose, onSave }) => {
   const [tags, setTags] = useState<string[]>(['Frontend', 'Design']);
   const [tagInput, setTagInput] = useState('');
+  const [url, setUrl] = useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const urlInputId = 'reference-url';
+  const titleInputId = 'reference-title';
+  const descriptionInputId = 'reference-description';
+  const tagsInputId = 'reference-tags';
 
   const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && tagInput.trim() !== '') {
       e.preventDefault();
-      if (!tags.includes(tagInput.trim())) {
-        setTags([...tags, tagInput.trim()]);
+      const normalizedTag = tagInput.trim();
+      if (!tags.includes(normalizedTag)) {
+        setTags([...tags, normalizedTag]);
       }
       setTagInput('');
     }
@@ -25,50 +38,108 @@ const AddReferenceModal: React.FC<AddReferenceModalProps> = ({ onClose }) => {
     setTags(tags.filter(t => t !== tagToRemove));
   };
 
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmedUrl = url.trim();
+    const trimmedTitle = title.trim();
+
+    if (trimmedUrl.length === 0) {
+      setErrorMessage(REFERENCE_MODAL_TEXT.emptyUrl);
+      return;
+    }
+
+    try {
+      new URL(trimmedUrl);
+    } catch {
+      setErrorMessage(REFERENCE_MODAL_TEXT.invalidUrl);
+      return;
+    }
+
+    if (trimmedTitle.length === 0) {
+      setErrorMessage(REFERENCE_MODAL_TEXT.emptyTitle);
+      return;
+    }
+
+    onSave({
+      url: trimmedUrl,
+      title: trimmedTitle,
+      description: description.trim(),
+      tags,
+    });
+    setErrorMessage('');
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 text-sys-text">
       <div className="w-full max-w-[560px] bg-surface rounded-2xl shadow-2xl p-8 border border-slate-700">
-        <h2 className="text-2xl font-pretendard font-bold mb-6">새 레퍼런스 아카이브</h2>
+        <h2 className="text-2xl font-pretendard font-bold mb-6">{REFERENCE_MODAL_TEXT.title}</h2>
         
-        <form className="flex flex-col gap-5">
+        <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
           <div>
-            <label className="block text-sm font-medium text-text-muted mb-2">URL 주소</label>
-            <Input type="url" placeholder="https://..." required />
+            <label htmlFor={urlInputId} className="block text-sm font-medium text-text-muted mb-2">{REFERENCE_MODAL_TEXT.urlLabel}</label>
+            <Input
+              id={urlInputId}
+              type="url"
+              placeholder={REFERENCE_MODAL_TEXT.urlPlaceholder}
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              isError={errorMessage === REFERENCE_MODAL_TEXT.emptyUrl || errorMessage === REFERENCE_MODAL_TEXT.invalidUrl}
+              required
+            />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-muted mb-2">레퍼런스 제목 (Title)</label>
-            <Input type="text" placeholder="제목을 입력하세요" required />
+            <label htmlFor={titleInputId} className="block text-sm font-medium text-text-muted mb-2">{REFERENCE_MODAL_TEXT.titleLabel}</label>
+            <Input
+              id={titleInputId}
+              type="text"
+              placeholder={REFERENCE_MODAL_TEXT.titlePlaceholder}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              isError={errorMessage === REFERENCE_MODAL_TEXT.emptyTitle}
+              required
+            />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-muted mb-2">부연 설명 (Description)</label>
+            <label htmlFor={descriptionInputId} className="block text-sm font-medium text-text-muted mb-2">{REFERENCE_MODAL_TEXT.descriptionLabel}</label>
             <textarea 
+              id={descriptionInputId}
               rows={4}
-              placeholder="레퍼런스에 대한 설명을 남겨주세요."
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder={REFERENCE_MODAL_TEXT.descriptionPlaceholder}
               className="w-full px-4 py-3 bg-[#060E20] text-sys-text font-pretendard rounded-lg border border-slate-700 focus:border-primary placeholder-text-muted outline-none transition-colors resize-none"
             ></textarea>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-muted mb-2">태그 (Tags)</label>
+            <label htmlFor={tagsInputId} className="block text-sm font-medium text-text-muted mb-2">{REFERENCE_MODAL_TEXT.tagsLabel}</label>
             <div className="flex flex-wrap gap-2 mb-2">
               {tags.map(tag => (
                 <TagBadge key={tag} label={tag} onRemove={() => removeTag(tag)} />
               ))}
             </div>
             <Input 
+              id={tagsInputId}
               type="text" 
-              placeholder="태그 입력 후 Enter" 
+              placeholder={REFERENCE_MODAL_TEXT.tagPlaceholder}
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={handleAddTag}
             />
           </div>
 
+          {errorMessage ? (
+            <p className="text-sm text-error text-body-ko" role="alert">
+              {errorMessage}
+            </p>
+          ) : null}
+
           <div className="flex justify-end gap-3 mt-4">
-            <Button type="button" variant="ghost" onClick={onClose}>취소</Button>
-            <Button type="submit">저장하기</Button>
+            <Button type="button" variant="ghost" onClick={onClose}>{REFERENCE_MODAL_TEXT.cancel}</Button>
+            <Button type="submit">{REFERENCE_MODAL_TEXT.submit}</Button>
           </div>
         </form>
       </div>

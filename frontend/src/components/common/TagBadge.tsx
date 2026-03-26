@@ -21,7 +21,7 @@ const TagBadge: React.FC<TagBadgeProps> = ({
           type="button"
           onClick={onRemove}
           className="ml-1.5 focus:outline-none hover:text-slate-400 text-slate-500"
-          aria-label={`Remove ${label}`}
+          aria-label={`${label} 태그 삭제`}
         >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
