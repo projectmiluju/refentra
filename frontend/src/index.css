@@ -2,7 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-primary: #1d4ed8;
+  --color-secondary: #64748b;
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-text: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-error: #ef4444;
+}
+
 @layer base {
+  html {
+    font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif;
+  }
+
   body {
     @apply bg-background text-sys-text font-pretendard m-0 p-0;
   }
