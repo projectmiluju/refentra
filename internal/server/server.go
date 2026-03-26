@@ -25,8 +25,10 @@ func NewServer(db *gorm.DB, distFs fs.FS) *Server {
 
 	refHandler := &handlers.ReferenceHandler{DB: db}
 	authHandler := &handlers.AuthHandler{}
+	healthHandler := &handlers.HealthHandler{DB: db}
 
 	api := e.Group("/api/v1")
+	api.GET("/health", healthHandler.GetStatus)
 	api.GET("/references", refHandler.GetReferences)
 	api.POST("/references", refHandler.CreateReference)
 	api.GET("/auth/me", authHandler.GetMe)

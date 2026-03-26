@@ -39,3 +39,21 @@ export const REFERENCE_MODAL_TEXT = {
   emptyTitle: '레퍼런스 제목을 입력해 주세요.',
   saveErrorFallback: '저장에 실패했습니다. 다시 시도해 주세요.',
 } as const;
+
+export const APP_TEXT = {
+  booting: '개발 환경을 확인하는 중...',
+} as const;
+
+export const SETUP_GUIDE_TEXT = {
+  kicker: 'Local Development Setup',
+  title: '데이터베이스 설정이 필요합니다.',
+  stepsTitle: '실행 순서',
+  hint: 'Docker로 PostgreSQL을 먼저 띄운 뒤 Go 서버를 다시 실행하면 정상 화면으로 진입합니다.',
+  resetHint: '데모 데이터를 처음 상태로 되돌리려면 Docker volume을 삭제한 뒤 컨테이너를 다시 생성하세요.',
+  defaultSteps: [
+    'cp .env.example .env',
+    'docker compose up -d postgres',
+    'cd frontend && npm run build',
+    'go run .',
+  ],
+} as const;

@@ -15,9 +15,14 @@ type ReferenceHandler struct {
 }
 
 func (h *ReferenceHandler) GetReferences(c echo.Context) error {
+	if h.DB == nil {
+		return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "Database connection is unavailable"})
+	}
+
 	var refs []models.Reference
-	if h.DB != nil {
-		h.DB.Order("created_at desc").Limit(50).Find(&refs)
+	if err := h.DB.Order("created_at desc").Limit(50).Find(&refs).Error; err != nil {
+		c.Logger().Errorf("failed to load references: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to load references"})
 	}
 	if refs == nil {
 		refs = []models.Reference{}
@@ -42,10 +47,14 @@ func (h *ReferenceHandler) CreateReference(c echo.Context) error {
 	// MVP Mock Auth User
 	ref.UploaderID = "user-1234"
 
-	if h.DB != nil {
-		if err := h.DB.Create(&ref).Error; err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to save reference"})
-		}
+	if h.DB == nil {
+		return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "Database connection is unavailable"})
 	}
+
+	if err := h.DB.Create(&ref).Error; err != nil {
+		c.Logger().Errorf("failed to save reference: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to save reference"})
+	}
+
 	return c.JSON(http.StatusCreated, ref)
 }

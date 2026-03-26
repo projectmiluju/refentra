@@ -21,7 +21,7 @@ func (a StringArray) Value() (driver.Value, error) {
 }
 
 type Reference struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	ID          uuid.UUID      `gorm:"type:uuid;primary_key" json:"id"`
 	URL         string         `gorm:"not null" json:"url"`
 	Title       string         `gorm:"not null" json:"title"`
 	Description string         `json:"description"`
@@ -30,4 +30,12 @@ type Reference struct {
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+func (r *Reference) BeforeCreate(*gorm.DB) error {
+	if r.ID == uuid.Nil {
+		r.ID = uuid.New()
+	}
+
+	return nil
 }
