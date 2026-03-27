@@ -88,6 +88,10 @@ go run .
 - 로그인 성공 시 Access Token은 `httpOnly` 쿠키로 내려가고, Refresh Token은 Redis에 저장됩니다.
 - 로그아웃 시 Redis Refresh Token과 브라우저 쿠키가 함께 폐기됩니다.
 - 대시보드에서는 제목/설명/URL 기준 검색, 태그 필터, 번호 기반 페이지네이션이 실제 서버 조회로 동작합니다.
+- 대시보드 검색 상태는 URL 쿼리와 동기화됩니다.
+  - 예: `/dashboard?search=react&tags=Frontend&tags=Docs&page=2`
+  - 새로고침하거나 같은 URL을 공유해도 검색어, 태그, 페이지 상태를 복원합니다.
+  - 잘못된 페이지 번호는 안내 후 마지막 유효 페이지 또는 `1페이지`로 보정됩니다.
 
 ### 재초기화
 데모 데이터를 처음 상태로 되돌리려면 volume까지 삭제해야 합니다.
@@ -140,6 +144,7 @@ docker compose up -d postgres redis
 - [Redis 세션 인증 PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.3-redis-session-auth.md)
 - [브라우저 E2E PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.4-browser-e2e.md)
 - [검색/필터/페이지네이션 PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.5-search-filter-pagination.md)
+- [대시보드 URL 쿼리 동기화 PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.6-dashboard-url-query-sync.md)
 
 ## 스크립트
 `frontend/package.json` 기준:
