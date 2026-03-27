@@ -41,6 +41,12 @@ npm install
 - Access Token: `httpOnly` 쿠키, 기본 `15분`
 - Refresh Token: Redis 저장, 기본 `24시간`
 
+보안 기본값:
+- 개발 환경 CORS 허용 오리진: `localhost/127.0.0.1`의 `4173`, `5173`, `8080`
+- 기본 rate limiting: `60 requests / 60 seconds`
+- 개발 환경 HSTS: 비활성화
+- CSP(Content-Security-Policy): same-origin 중심 기본 정책 적용
+
 `.env`에서 비밀번호와 포트를 바꾸면 앱과 Docker DB가 같은 값을 보도록 맞춰야 합니다.
 
 ### 실행
@@ -168,4 +174,6 @@ Docker 기준:
   - `AUTH_COOKIE_SECURE=true`
   - 강한 `AUTH_JWT_SECRET`, `DB_PASSWORD`, `REDIS_PASSWORD`
   - 실제 도메인과 ACME 이메일 설정
+  - `CORS_ALLOW_ORIGINS`를 실제 배포 도메인만 포함하도록 제한
+  - `SECURITY_ENABLE_HSTS=true`
   - DB/Redis 외부 포트 미노출

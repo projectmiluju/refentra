@@ -67,7 +67,8 @@ APP_IMAGE_TAG=v0.6.0 docker compose --env-file .env.production -f docker-compose
 ## 보안 메모
 - `AUTH_COOKIE_SECURE=true`를 유지합니다.
 - `AUTH_JWT_SECRET`, `DB_PASSWORD`, `REDIS_PASSWORD`는 강한 값으로 교체해야 합니다.
-- 현재 애플리케이션 CORS는 코드에서 기본 허용 설정을 사용합니다. 프로덕션 오리진 제한은 다음 `build` 사이클에서 별도로 하드닝해야 합니다.
+- `CORS_ALLOW_ORIGINS`는 실제 배포 도메인만 남겨야 합니다.
+- `SECURITY_ENABLE_HSTS=true`를 유지하고, Caddy가 HTTPS 종단을 맡는 구조를 전제로 합니다.
 - Redis는 `requirepass`를 사용하므로 비밀번호 없이 운영하지 않습니다.
 
 ## 운영 리스크
