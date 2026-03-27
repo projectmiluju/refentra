@@ -61,6 +61,7 @@ cd frontend
 npm test
 npm run typecheck
 npm run build
+npm run test:e2e
 ```
 
 백엔드 실행:
@@ -137,6 +138,8 @@ docker compose up -d postgres redis
 - `npm run preview`: 빌드 결과 미리보기
 - `npm run typecheck`: 프론트엔드 타입 검사
 - `npm test`: Vitest 테스트 실행
+- `npm run test:e2e`: Playwright 기반 브라우저 E2E 실행
+- `npm run test:e2e:headed`: Playwright E2E를 headed 모드로 실행
 
 Go 기준:
 - `go test ./...`: 백엔드 테스트 실행
