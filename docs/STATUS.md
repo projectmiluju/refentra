@@ -5,6 +5,12 @@
 **배포 URL:** 미정
 
 ## 최근 변경
+- `main`에는 same-repo PR 전용 `Playwright Smoke E2E` GitHub Actions job이 추가됐습니다.
+- PR에서는 full Playwright 대신 smoke 범위만 실행하고, full E2E는 `push` 경로에 남겨 PR 대기 시간을 줄였습니다.
+- smoke 범위는 보호 라우트 리다이렉트, 저장/재조회/로그아웃, 대시보드 URL 쿼리 복원 3개 시나리오로 고정됐습니다.
+- PostgreSQL/Redis readiness, 앱 health check, HTML report, test-results, 서버 로그 아티팩트 업로드 규칙이 워크플로에 반영됐습니다.
+- QA 과정에서 Playwright HTML report 환경변수 충돌로 산출물 경로가 어긋나는 문제가 드러났고, `REFENTRA_PLAYWRIGHT_*` 접두사로 수정됐습니다.
+- 깨끗한 GitHub Actions 체크아웃에서 `go test ./...`가 `frontend/dist` 부재로 실패하던 문제를 `frontend/dist/.gitkeep` 추적으로 해결했습니다.
 - `main`에는 Playwright 기반 대시보드 URL 쿼리 복원 E2E가 추가됐습니다.
 - 쿼리 포함 `/dashboard` 직접 진입, 로그인 후 같은 상태 복귀, 새로고침 후 유지, 잘못된 `page`의 `1페이지` 보정까지 브라우저에서 검증합니다.
 - Playwright는 더 이상 기존 `8080` 서버를 재사용하지 않고, 현재 코드 기준 `go run .` 서버를 직접 띄웁니다.
@@ -31,8 +37,8 @@
 | `go mod tidy`가 현재 저장소 루트에서 `frontend/node_modules`까지 스캔하려 들어가 실패함 | 낮음 | 조사 필요 |
 | mock 사용자 1명 기반이라 실제 계정/권한 도메인은 아직 없음 | 중간 | 진행 예정 |
 | 온보딩 빈 상태 E2E가 실제 빈 DB 대신 API 응답 mock에 의존함 | 낮음 | 유지 |
-| 검색/태그 필터/페이지네이션 자체를 검증하는 Playwright E2E는 아직 부분적임 | 낮음 | 진행 예정 |
-| GitHub Actions 워크플로우는 `actionlint` 정적 린트와 실제 GitHub 런너 검증이 아직 없음 | 낮음 | 진행 예정 |
+| 검색/태그 필터/페이지네이션 전체 시나리오를 PR smoke에 넣지는 않고 핵심 흐름만 선별했다 | 낮음 | 유지 |
+| GitHub Actions 워크플로우는 `actionlint` 정적 린트가 아직 없음 | 낮음 | 진행 예정 |
 | rate limiting이 메모리 스토어 기반이라 다중 인스턴스 환경에서는 공유되지 않음 | 중간 | 유지 |
 | CSP는 현재 앱 구조 기준의 보수적 기본값이라 외부 리소스 추가 시 재조정 필요 | 낮음 | 유지 |
 
@@ -42,16 +48,14 @@
 | Docker init SQL과 GORM 모델 변경을 장기적으로 마이그레이션 체계로 통합 | 2026-03-27 | 1일 |
 | mock 사용자 1명 정책을 실제 계정/비밀번호 체계로 확장 | 2026-03-27 | 1~2일 |
 | Go 모듈 루트와 프론트 자산 구조 충돌 없이 `go mod tidy` 가능한 정리 | 2026-03-27 | 반나절 |
-| Playwright를 CI에서 자동 실행할 수 있도록 워크플로우와 환경 부트스트랩 정리 | 2026-03-27 | 반나절~1일 |
 | rate limiting을 Redis 등 공유 스토어 기반으로 바꿔 다중 인스턴스 대응 | 2026-03-27 | 반나절~1일 |
 | CSP를 실제 외부 자산/분석 도구 도입 시 정책 단위로 재정비 | 2026-03-27 | 반나절 |
-| 검색/태그 필터/페이지네이션 자체를 Playwright E2E로 확장 | 2026-03-27 | 반나절 |
+| 검색/태그 필터/페이지네이션 전체 회귀를 nightly 또는 후속 full E2E로 확장 | 2026-03-27 | 반나절 |
 
 ## 다음 계획
 - [ ] mock 사용자 기반 인증을 실제 사용자 계정 체계로 확장할지 결정
-- [ ] 검색/태그 필터/페이지네이션 Playwright E2E 확장
-- [ ] Playwright E2E를 CI에서 자동 실행하도록 연결
-- [ ] GitHub Actions 워크플로우를 실제 GitHub 런너에서 검증
+- [ ] 검색/태그 필터/페이지네이션 full E2E 범위를 nightly 또는 후속 워크플로로 확장
+- [ ] GitHub Actions에 `actionlint` 또는 동등한 정적 검증 추가
 - [ ] 배포 자동화와 서버 시크릿 주입 절차를 실제 환경 기준으로 확정
 - [ ] rate limiting을 공유 스토어 기반으로 확장할지 결정
 - [ ] 실제 운영 도메인 기준으로 CSP를 재조정

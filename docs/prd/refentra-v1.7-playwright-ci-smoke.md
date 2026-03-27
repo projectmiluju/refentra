@@ -1,8 +1,8 @@
 # [PRD] Playwright Smoke E2E CI 자동화
 
-**Status:** Draft
+**Status:** Approved
 **Date:** 2026-03-27
-**Branch:** main
+**Branch:** feat/1-playwright-smoke-ci
 
 ## 1. 개요 (Overview)
 - **배경 및 목적:** 현재 Refentra는 Playwright 기반 브라우저 E2E를 로컬에서 수동 실행할 수 있지만, PR 단계에서 자동으로 회귀를 차단하지는 못합니다. 이 상태는 로그인, 보호 라우트, 저장/재조회, URL 복원 같은 핵심 사용자 흐름이 깨져도 코드 리뷰 단계에서 늦게 발견될 가능성을 남깁니다. 이번 기능의 목적은 PR 생성/업데이트마다 GitHub Actions가 핵심 smoke E2E를 자동 실행해, 수동 확인 단계를 제거하고 브라우저 회귀를 merge 전에 차단하는 것입니다.
