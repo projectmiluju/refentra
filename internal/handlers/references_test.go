@@ -34,6 +34,56 @@ func TestGetReferencesWithoutDatabaseReturnsServiceUnavailable(t *testing.T) {
 	}
 }
 
+func TestGetReferencesRejectsInvalidPage(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/references?page=0", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.Set(authsession.ContextUserIDKey, "user-1234")
+
+	handler := &ReferenceHandler{}
+
+	if err := handler.GetReferences(ctx); err != nil {
+		t.Fatalf("GetReferences returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusServiceUnavailable && rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400 or 503, got %d", rec.Code)
+	}
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", rec.Code)
+	}
+
+	expected := `{"error":"page must be a positive integer"}`
+	if rec.Body.String() != expected+"\n" {
+		t.Fatalf("expected body %s, got %s", expected, rec.Body.String())
+	}
+}
+
+func TestGetReferencesRejectsInvalidLimit(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/references?limit=-1", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.Set(authsession.ContextUserIDKey, "user-1234")
+
+	handler := &ReferenceHandler{}
+
+	if err := handler.GetReferences(ctx); err != nil {
+		t.Fatalf("GetReferences returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", rec.Code)
+	}
+
+	expected := `{"error":"limit must be a positive integer"}`
+	if rec.Body.String() != expected+"\n" {
+		t.Fatalf("expected body %s, got %s", expected, rec.Body.String())
+	}
+}
+
 func TestCreateReferenceRejectsMissingRequiredFields(t *testing.T) {
 	e := echo.New()
 	body := bytes.NewBufferString(`{"url":" ","title":" "}`)
