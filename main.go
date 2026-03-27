@@ -58,6 +58,20 @@ func envIntOrDefault(key string, fallback int) int {
 	return parsed
 }
 
+func envDurationFromSeconds(key string, fallback time.Duration) time.Duration {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed <= 0 {
+		return fallback
+	}
+
+	return time.Duration(parsed) * time.Second
+}
+
 func main() {
 	// 1. Database Connection
 	dsn := "host=" + envOrDefault("DB_HOST", "localhost") +
@@ -123,7 +137,23 @@ func main() {
 		})
 	}
 
-	srv := server.NewServer(db, redisClient, authService, distFs)
+	securityConfig := server.DefaultSecurityConfig()
+	if origins := server.ParseCSV(os.Getenv("CORS_ALLOW_ORIGINS")); len(origins) > 0 {
+		securityConfig.CORSAllowOrigins = origins
+	}
+	if methods := server.ParseCSV(os.Getenv("CORS_ALLOW_METHODS")); len(methods) > 0 {
+		securityConfig.CORSAllowMethods = methods
+	}
+	if headers := server.ParseCSV(os.Getenv("CORS_ALLOW_HEADERS")); len(headers) > 0 {
+		securityConfig.CORSAllowHeaders = headers
+	}
+	securityConfig.CORSAllowCredentials = envBoolOrDefault("CORS_ALLOW_CREDENTIALS", true)
+	securityConfig.RateLimitRequests = envIntOrDefault("RATE_LIMIT_REQUESTS", securityConfig.RateLimitRequests)
+	securityConfig.RateLimitWindow = envDurationFromSeconds("RATE_LIMIT_WINDOW_SECONDS", securityConfig.RateLimitWindow)
+	securityConfig.EnableHSTS = envBoolOrDefault("SECURITY_ENABLE_HSTS", false)
+	securityConfig.ContentSecurityPolicy = envOrDefault("SECURITY_CONTENT_SECURITY_POLICY", securityConfig.ContentSecurityPolicy)
+
+	srv := server.NewServer(db, redisClient, authService, distFs, securityConfig)
 
 	// 4. Start Server
 	if err := srv.Start(":8080"); err != nil {
