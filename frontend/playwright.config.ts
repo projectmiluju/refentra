@@ -26,7 +26,7 @@ export default defineConfig({
   webServer: {
     command: 'go run .',
     url: BASE_URL,
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     cwd: ROOT_DIR,
     timeout: 120_000,
   },
