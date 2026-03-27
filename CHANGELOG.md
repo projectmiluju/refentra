@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### 추가
+- GitHub Actions에 same-repo PR 전용 `Playwright Smoke E2E` job과 `workflow_dispatch` 수동 실행 경로를 추가
+- Playwright smoke 실패 시 HTML report, test-results, 서버 로그를 아티팩트로 업로드하도록 정리
+- `npm run test:e2e:smoke`, `npm run test:e2e:smoke:ci` 스크립트를 추가
+
+### 수정
+- PR에서는 full Playwright 대신 smoke E2E만 실행하고, full E2E는 `push`에서만 유지하도록 CI 역할을 분리
+- 같은 PR에 새 push가 들어오면 이전 CI 실행을 취소하고 최신 SHA만 유지하도록 concurrency 정책을 추가
+- Playwright 설정을 CI 환경변수 기반 report/trace/server 재사용 정책으로 확장
+
+### 테스트
+- `go test ./...`, `npm run typecheck`, `npm test`, `npm run test:e2e:smoke`, `docker compose config` 통과
+
 ## [v0.8.0] - 2026-03-27
 
 ### 추가

@@ -67,6 +67,7 @@ cd frontend
 npm test
 npm run typecheck
 npm run build
+npm run test:e2e:smoke
 npm run test:e2e
 ```
 
@@ -158,6 +159,7 @@ docker compose up -d postgres redis
 - `npm run preview`: 빌드 결과 미리보기
 - `npm run typecheck`: 프론트엔드 타입 검사
 - `npm test`: Vitest 테스트 실행
+- `npm run test:e2e:smoke`: smoke 태그가 붙은 핵심 Playwright 시나리오만 무재시도로 실행
 - `npm run test:e2e`: Playwright 기반 브라우저 E2E 실행
 - `npm run test:e2e:headed`: Playwright E2E를 headed 모드로 실행
 
@@ -169,6 +171,28 @@ Docker 기준:
 - `docker compose up -d postgres redis`: 개발용 PostgreSQL/Redis 실행
 - `docker compose down`: 컨테이너 중지
 - `docker compose down -v`: volume까지 삭제하고 초기 상태로 재생성 준비
+
+## CI Smoke E2E 정책
+- same-repo PR은 GitHub Actions의 `Playwright Smoke E2E` job이 자동 실행됩니다.
+- 외부 fork PR은 기본 자동 실행 대상이 아닙니다. 필요하면 저장소 관리자가 `workflow_dispatch`로 수동 실행해야 합니다.
+- 같은 PR에 새 push가 들어오면 이전 CI 실행은 취소되고 최신 SHA만 계속 진행됩니다.
+- smoke 범위는 아래 3개 시나리오입니다.
+  - 보호된 대시보드 접근 시 로그인 리다이렉트
+  - 로그인 후 저장, 새로고침 재조회, 로그아웃, 재접근 차단
+  - 로그인 후 대시보드 URL 쿼리 상태 복원
+- 실패 시 GitHub Actions 아티팩트 `playwright-smoke-artifacts`에 아래 산출물이 업로드됩니다.
+  - `frontend/playwright-report`
+  - `frontend/test-results`
+  - `/tmp/refentra-smoke-server.log`
+
+로컬 재현 절차:
+```bash
+docker compose up -d postgres redis
+cd frontend
+npm ci
+npx playwright install --with-deps chromium
+npm run test:e2e:smoke
+```
 
 ## 배포 스캐폴드
 - 운영 배포 자산은 아래 파일로 분리되어 있습니다.
