@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v0.8.0] - 2026-03-27
 
 ### 추가
 - Playwright로 `search + tags + page` URL 상태 복원과 로그인 후 같은 대시보드 상태 복귀를 검증하는 E2E를 추가
