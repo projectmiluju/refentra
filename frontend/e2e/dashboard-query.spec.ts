@@ -3,7 +3,7 @@ import { installQueryStateMock } from './utils/dashboardMocks';
 import { loginWithApi } from './utils/session';
 
 test.describe('대시보드 URL 상태 복원', () => {
-  test('인증 후 쿼리 포함 대시보드에 진입하면 같은 상태를 복원하고 새로고침 후에도 유지한다', async ({ page }) => {
+  test('@smoke 인증 후 쿼리 포함 대시보드에 진입하면 같은 상태를 복원하고 새로고침 후에도 유지한다', async ({ page }) => {
     await installQueryStateMock(page);
 
     await page.goto('/dashboard?search=react&tags=Frontend&tags=Docs&page=2');

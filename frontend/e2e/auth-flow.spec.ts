@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { createUniqueReference, loginFromPage, logoutFromPage } from './utils/session';
 
 test.describe('브라우저 핵심 인증 흐름', () => {
-  test('비로그인 사용자는 보호된 대시보드 접근 시 로그인 페이지로 이동한다', async ({ page }) => {
+  test('@smoke 비로그인 사용자는 보호된 대시보드 접근 시 로그인 페이지로 이동한다', async ({ page }) => {
     await page.goto('/dashboard?search=react&page=2');
 
     await expect(page).toHaveURL(/\/login(?:\?.*)?$/);
@@ -37,7 +37,7 @@ test.describe('브라우저 핵심 인증 흐름', () => {
     await expect(page.getByText('오른쪽 상단의 새 레퍼런스 추가 버튼을 누릅니다.')).toBeVisible();
   });
 
-  test('로그인 후 저장, 새로고침 재조회, 로그아웃과 재접근 차단이 동작한다', async ({ page }) => {
+  test('@smoke 로그인 후 저장, 새로고침 재조회, 로그아웃과 재접근 차단이 동작한다', async ({ page }) => {
     const reference = createUniqueReference();
 
     await loginFromPage(page);
