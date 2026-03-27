@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import { LOGIN_TEXT } from '../constants/uiText';
 import { login } from '../lib/auth';
+import { clearLoginRedirect, resolveLoginRedirect } from '../lib/loginRedirect';
 
 interface LoginProps {
   sessionMessage: string;
   redirectTo?: string;
   onLoginSuccess: () => void;
+}
+
+interface LoginLocationState {
+  redirectTo?: string;
 }
 
 const DEFAULT_REDIRECT_PATH = '/dashboard';
@@ -17,8 +22,13 @@ const resolveRedirectTarget = (redirectTo?: string): string => (
   redirectTo?.startsWith('/dashboard') ? redirectTo : DEFAULT_REDIRECT_PATH
 );
 
+const hasExplicitDashboardRedirect = (value?: string): boolean => (
+  typeof value === 'string' && value.startsWith('/dashboard') && value !== DEFAULT_REDIRECT_PATH
+);
+
 const Login: React.FC<LoginProps> = ({ sessionMessage, redirectTo, onLoginSuccess }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState(sessionMessage);
@@ -53,8 +63,26 @@ const Login: React.FC<LoginProps> = ({ sessionMessage, redirectTo, onLoginSucces
         password: password.trim(),
       });
       setErrorMessage('');
+      const state = location.state as LoginLocationState | null;
+      const resolvedRedirect = redirectTo && redirectTo !== DEFAULT_REDIRECT_PATH
+        ? redirectTo
+        : state?.redirectTo ?? resolveLoginRedirect(location.search);
+      const nextRedirectTarget = resolveRedirectTarget(resolvedRedirect);
+      clearLoginRedirect();
+
+      if (
+        !hasExplicitDashboardRedirect(resolvedRedirect)
+        && typeof window !== 'undefined'
+        && typeof window.history.state?.idx === 'number'
+        && window.history.state.idx > 0
+      ) {
+        navigate(-1);
+        onLoginSuccess();
+        return;
+      }
+
+      navigate(nextRedirectTarget, { replace: true });
       onLoginSuccess();
-      navigate(resolveRedirectTarget(redirectTo), { replace: true });
     } catch (error) {
       if (error instanceof Error) {
         setErrorMessage(error.message);

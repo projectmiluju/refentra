@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import TagBadge from '../components/common/TagBadge';
@@ -8,7 +8,7 @@ import AddReferenceModal from '../components/modal/AddReferenceModal';
 import { DASHBOARD_TEXT } from '../constants/uiText';
 import type { ReferenceDraft, ReferenceItem, ReferenceListQuery } from '../types/reference';
 import { createReference, fetchReferences } from '../lib/references';
-import { createDashboardSearchParams, parseDashboardSearchParams } from '../lib/dashboardQuery';
+import { getDashboardLocation, parseDashboardSearchParams } from '../lib/dashboardQuery';
 
 interface DashboardProps {
   onLoggedOut: () => Promise<void>;
@@ -18,7 +18,8 @@ const REFERENCE_PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 300;
 
 const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [references, setReferences] = useState<ReferenceItem[]>([]);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -26,11 +27,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
   const [loadError, setLoadError] = useState('');
   const [pageNotice, setPageNotice] = useState('');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [searchInput, setSearchInput] = useState('');
   const [lastValidPage, setLastValidPage] = useState<number | null>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-  const { search: searchQuery, tags: selectedTags, page: currentPage, invalidPage } = parseDashboardSearchParams(searchParams);
+  const { search: searchQuery, tags: selectedTags, page: currentPage, invalidPage } = parseDashboardSearchParams(
+    new URLSearchParams(location.search),
+  );
+  const [searchInput, setSearchInput] = useState(searchQuery);
 
   const hasActiveFilters = searchQuery.trim().length > 0 || selectedTags.length > 0;
 
@@ -38,19 +41,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
     overrides: Partial<ReferenceListQuery> = {},
     options: { replace?: boolean } = {},
   ): void => {
-    const nextParams = createDashboardSearchParams({
+    const nextLocation = getDashboardLocation({
       search: overrides.search ?? searchQuery,
       tags: overrides.tags ?? selectedTags,
       page: overrides.page ?? currentPage,
     });
-    const nextSerialized = nextParams.toString();
-    const currentSerialized = searchParams.toString();
+    const currentLocation = `${location.pathname}${location.search}`;
 
-    if (nextSerialized === currentSerialized) {
+    if (nextLocation === currentLocation) {
       return;
     }
 
-    setSearchParams(nextParams, { replace: options.replace ?? false });
+    navigate(nextLocation, { replace: options.replace ?? false });
   };
 
   const buildReferenceQuery = (overrides: Partial<ReferenceListQuery> = {}): ReferenceListQuery => ({
@@ -107,7 +109,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
 
     setPageNotice(DASHBOARD_TEXT.invalidPageFallback);
     updateDashboardQuery({ page: lastValidPage ?? 1 }, { replace: true });
-  }, [invalidPage, lastValidPage, searchQuery, selectedTags]);
+  }, [invalidPage, lastValidPage, searchQuery, selectedTags, navigate, location.pathname, location.search]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -124,7 +126,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [searchInput, searchQuery, selectedTags, currentPage]);
+  }, [searchInput, searchQuery, selectedTags, currentPage, navigate, location.pathname, location.search]);
 
   useEffect(() => {
     if (invalidPage) {
