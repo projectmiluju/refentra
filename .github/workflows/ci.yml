@@ -5,6 +5,11 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test-and-build:
@@ -56,8 +61,112 @@ jobs:
         run: npm run build
 
       - name: Playwright E2E
+        if: github.event_name == 'push'
         working-directory: frontend
         run: npm run test:e2e
+
+      - name: Stop containers
+        if: always()
+        run: docker compose down -v
+
+  playwright-smoke:
+    name: Playwright Smoke E2E
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository
+      )
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Start PostgreSQL and Redis
+        run: docker compose up -d postgres redis
+
+      - name: Wait for PostgreSQL and Redis readiness
+        run: |
+          for service in refentra-postgres refentra-redis; do
+            for attempt in {1..30}; do
+              status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}unknown{{end}}' "$service")
+              if [ "$status" = "healthy" ]; then
+                break
+              fi
+
+              if [ "$attempt" -eq 30 ]; then
+                echo "::error::$service readiness check failed with status=$status"
+                docker compose logs "$service"
+                exit 1
+              fi
+
+              sleep 2
+            done
+          done
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Build frontend assets
+        working-directory: frontend
+        run: npm run build
+
+      - name: Start Go server
+        run: go run . > /tmp/refentra-smoke-server.log 2>&1 &
+
+      - name: Wait for app health
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8080/api/v1/health >/tmp/refentra-health.json; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 30 ]; then
+              echo "::error::Application health check failed"
+              cat /tmp/refentra-smoke-server.log
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+      - name: Run Playwright smoke tests
+        working-directory: frontend
+        env:
+          REFENTRA_PLAYWRIGHT_HTML_REPORT: 'true'
+          REFENTRA_PLAYWRIGHT_TRACE_MODE: retain-on-failure
+          REFENTRA_PLAYWRIGHT_MANAGED_SERVER: 'true'
+        run: npm run test:e2e:smoke:ci
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-artifacts
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+            /tmp/refentra-smoke-server.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Stop containers
         if: always()
