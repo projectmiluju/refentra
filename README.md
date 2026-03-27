@@ -81,6 +81,7 @@ go run .
 - 현재 로그인은 mock 사용자 1명을 기준으로 하지만, 세션 자체는 서버가 발급하고 검증합니다.
 - 로그인 성공 시 Access Token은 `httpOnly` 쿠키로 내려가고, Refresh Token은 Redis에 저장됩니다.
 - 로그아웃 시 Redis Refresh Token과 브라우저 쿠키가 함께 폐기됩니다.
+- 대시보드에서는 제목/설명/URL 기준 검색, 태그 필터, 번호 기반 페이지네이션이 실제 서버 조회로 동작합니다.
 
 ### 재초기화
 데모 데이터를 처음 상태로 되돌리려면 volume까지 삭제해야 합니다.
@@ -132,6 +133,7 @@ docker compose up -d postgres redis
 - [로컬 Docker Postgres PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.2-local-dev-docker-postgres.md)
 - [Redis 세션 인증 PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.3-redis-session-auth.md)
 - [브라우저 E2E PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.4-browser-e2e.md)
+- [검색/필터/페이지네이션 PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.5-search-filter-pagination.md)
 
 ## 스크립트
 `frontend/package.json` 기준:
