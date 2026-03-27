@@ -3,7 +3,7 @@ import { createUniqueReference, loginFromPage, logoutFromPage } from './utils/se
 
 test.describe('브라우저 핵심 인증 흐름', () => {
   test('비로그인 사용자는 보호된 대시보드 접근 시 로그인 페이지로 이동한다', async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('/dashboard?search=react&page=2');
 
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole('button', { name: '로그인' })).toBeVisible();

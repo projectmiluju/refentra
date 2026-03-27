@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import Dashboard from './Dashboard';
 
 const fetchMock = vi.fn();
@@ -24,6 +25,27 @@ const createListResponse = (items: unknown[], overrides: Partial<{
   total_pages: overrides.total_pages ?? (items.length > 0 ? 1 : 0),
   available_tags: overrides.available_tags ?? ['Go', 'React', 'Frontend'],
 });
+
+const LocationDisplay = () => {
+  const location = useLocation();
+  return <div data-testid="location-display">{`${location.pathname}${location.search}`}</div>;
+};
+
+const renderDashboard = (route = '/dashboard') => render(
+  <MemoryRouter initialEntries={[route]}>
+    <Routes>
+      <Route
+        path="/dashboard"
+        element={(
+          <>
+            <Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />
+            <LocationDisplay />
+          </>
+        )}
+      />
+    </Routes>
+  </MemoryRouter>,
+);
 
 describe('Dashboard', () => {
   beforeEach(() => {
@@ -49,7 +71,7 @@ describe('Dashboard', () => {
         available_tags: ['Go'],
       })));
 
-    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
+    renderDashboard();
 
     expect(screen.getByText('레퍼런스를 불러오는 중...')).toBeInTheDocument();
     expect(await screen.findByText('서버 문서')).toBeInTheDocument();
@@ -63,7 +85,7 @@ describe('Dashboard', () => {
       available_tags: [],
     })));
 
-    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
+    renderDashboard();
 
     expect(await screen.findByText('첫 아카이브를 시작해 보세요.')).toBeInTheDocument();
     expect(screen.getByText('처음 시작할 때 추천하는 순서')).toBeInTheDocument();
@@ -84,7 +106,7 @@ describe('Dashboard', () => {
 
     const user = userEvent.setup();
 
-    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
+    renderDashboard();
 
     expect(await screen.findByText('DB 연결 실패')).toBeInTheDocument();
 
@@ -127,7 +149,7 @@ describe('Dashboard', () => {
 
     const user = userEvent.setup();
 
-    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
+    renderDashboard();
 
     await screen.findByText('첫 아카이브를 시작해 보세요.');
     await user.click(screen.getByRole('button', { name: '새 레퍼런스 추가' }));
@@ -155,7 +177,7 @@ describe('Dashboard', () => {
 
     const user = userEvent.setup();
 
-    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
+    renderDashboard();
 
     await screen.findByText('첫 아카이브를 시작해 보세요.');
     await user.click(screen.getByRole('button', { name: '새 레퍼런스 추가' }));
@@ -197,7 +219,7 @@ describe('Dashboard', () => {
 
     const user = userEvent.setup();
 
-    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
+    renderDashboard();
 
     await screen.findByText('첫 아카이브를 시작해 보세요.');
     await user.click(screen.getByRole('button', { name: '새 레퍼런스 추가' }));
@@ -233,7 +255,7 @@ describe('Dashboard', () => {
       json: async () => ({ error: 'Database connection is unavailable' }),
     });
 
-    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
+    renderDashboard();
 
     expect(await screen.findByText('Database connection is unavailable')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument();
@@ -263,7 +285,7 @@ describe('Dashboard', () => {
         available_tags: ['React'],
       })));
 
-    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
+    renderDashboard();
 
     await screen.findByText('React 패턴');
     await user.type(screen.getByPlaceholderText('레퍼런스 검색...'), 'golang');
@@ -308,7 +330,7 @@ describe('Dashboard', () => {
           available_tags: ['React', 'Go'],
         })));
 
-    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
+    renderDashboard();
 
     await screen.findByText('React 패턴');
     await user.click(screen.getByRole('button', { name: 'Go' }));
@@ -318,42 +340,73 @@ describe('Dashboard', () => {
   });
 
   it('페이지 번호를 누르면 해당 페이지를 다시 조회해야 한다', async () => {
-    const user = userEvent.setup();
-
     fetchMock
       .mockResolvedValueOnce(createFetchResponse(createListResponse([
           {
             id: 'ref-1',
-            title: '첫 페이지 문서',
-            url: 'https://example.com/page-1',
+            title: 'React 검색 결과',
+            url: 'https://example.com/react',
             description: '설명',
-            tags: ['React'],
+            tags: ['Go', 'Frontend'],
             uploader_id: 'user-1234',
             created_at: '2026-03-26T00:00:00Z',
           },
         ], {
-          total_count: 12,
-          total_pages: 2,
-          available_tags: ['React'],
-        })))
-      .mockResolvedValueOnce(createFetchResponse(createListResponse([
-          {
-            id: 'ref-2',
-            title: '두 번째 페이지 문서',
-            url: 'https://example.com/page-2',
-            description: '설명',
-            tags: ['React'],
-            uploader_id: 'user-1234',
-            created_at: '2026-03-25T00:00:00Z',
-          },
-        ], {
           page: 2,
-          total_count: 12,
+          total_count: 1,
           total_pages: 2,
-          available_tags: ['React'],
+          available_tags: ['Go', 'Frontend'],
         })));
 
-    render(<Dashboard onLoggedOut={vi.fn().mockResolvedValue(undefined)} />);
+    renderDashboard('/dashboard?search=react&tags=Go&tags=Frontend&page=2');
+
+    await screen.findByText('React 검색 결과');
+
+    expect(fetchMock.mock.calls[0]?.[0]).toContain('search=react');
+    expect(fetchMock.mock.calls[0]?.[0]).toContain('tags=Go');
+    expect(fetchMock.mock.calls[0]?.[0]).toContain('tags=Frontend');
+    expect(fetchMock.mock.calls[0]?.[0]).toContain('page=2');
+    expect(screen.getByPlaceholderText('레퍼런스 검색...')).toHaveValue('react');
+    expect(screen.getByTestId('location-display')).toHaveTextContent('/dashboard?search=react&tags=Go&tags=Frontend&page=2');
+  });
+
+  it('페이지 번호를 누르면 URL과 함께 해당 페이지를 다시 조회해야 한다', async () => {
+    const user = userEvent.setup();
+
+    fetchMock
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([
+        {
+          id: 'ref-1',
+          title: '첫 페이지 문서',
+          url: 'https://example.com/page-1',
+          description: '설명',
+          tags: ['React'],
+          uploader_id: 'user-1234',
+          created_at: '2026-03-26T00:00:00Z',
+        },
+      ], {
+        total_count: 12,
+        total_pages: 2,
+        available_tags: ['React'],
+      })))
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([
+        {
+          id: 'ref-2',
+          title: '두 번째 페이지 문서',
+          url: 'https://example.com/page-2',
+          description: '설명',
+          tags: ['React'],
+          uploader_id: 'user-1234',
+          created_at: '2026-03-25T00:00:00Z',
+        },
+      ], {
+        page: 2,
+        total_count: 12,
+        total_pages: 2,
+        available_tags: ['React'],
+      })));
+
+    renderDashboard();
 
     await screen.findByText('첫 페이지 문서');
     await user.click(screen.getByRole('button', { name: '2' }));
@@ -361,5 +414,114 @@ describe('Dashboard', () => {
     expect(await screen.findByText('두 번째 페이지 문서')).toBeInTheDocument();
     expect(screen.getByText('12개의 레퍼런스')).toBeInTheDocument();
     expect(fetchMock.mock.calls[1]?.[0]).toContain('page=2');
+    expect(screen.getByTestId('location-display')).toHaveTextContent('/dashboard?page=2');
+  });
+
+  it('검색어와 태그를 바꾸면 URL 쿼리를 함께 갱신해야 한다', async () => {
+    const user = userEvent.setup();
+
+    fetchMock
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([
+        {
+          id: 'ref-1',
+          title: 'React 패턴',
+          url: 'https://example.com/react',
+          description: '설명',
+          tags: ['React'],
+          uploader_id: 'user-1234',
+          created_at: '2026-03-26T00:00:00Z',
+        },
+      ], {
+        total_count: 1,
+        total_pages: 1,
+        available_tags: ['React', 'Go'],
+      })))
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([
+        {
+          id: 'ref-2',
+          title: 'Go 문서',
+          url: 'https://example.com/go',
+          description: '설명',
+          tags: ['Go'],
+          uploader_id: 'user-1234',
+          created_at: '2026-03-26T00:00:00Z',
+        },
+      ], {
+        total_count: 1,
+        total_pages: 1,
+        available_tags: ['React', 'Go'],
+      })))
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([
+        {
+          id: 'ref-2',
+          title: 'Go 문서',
+          url: 'https://example.com/go',
+          description: '설명',
+          tags: ['Go'],
+          uploader_id: 'user-1234',
+          created_at: '2026-03-26T00:00:00Z',
+        },
+      ], {
+        total_count: 1,
+        total_pages: 1,
+        available_tags: ['React', 'Go'],
+      })));
+
+    renderDashboard();
+
+    await screen.findByText('React 패턴');
+    await user.type(screen.getByPlaceholderText('레퍼런스 검색...'), 'go');
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+    expect(screen.getByTestId('location-display')).toHaveTextContent('/dashboard?search=go');
+
+    await user.click(screen.getByRole('button', { name: 'Go' }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+    expect(screen.getByTestId('location-display')).toHaveTextContent('/dashboard?search=go&tags=Go');
+  });
+
+  it('유효하지 않은 페이지 쿼리면 에러를 보여주고 1페이지로 보정해야 한다', async () => {
+    fetchMock
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([
+        {
+          id: 'ref-1',
+          title: '첫 페이지 문서',
+          url: 'https://example.com/page-1',
+          description: '설명',
+          tags: ['React'],
+          uploader_id: 'user-1234',
+          created_at: '2026-03-26T00:00:00Z',
+        },
+      ], {
+        total_count: 1,
+        total_pages: 1,
+        available_tags: ['React'],
+      })))
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([
+        {
+          id: 'ref-1',
+          title: '첫 페이지 문서',
+          url: 'https://example.com/page-1',
+          description: '설명',
+          tags: ['React'],
+          uploader_id: 'user-1234',
+          created_at: '2026-03-26T00:00:00Z',
+        },
+      ], {
+        total_count: 1,
+        total_pages: 1,
+        available_tags: ['React'],
+      })));
+
+    renderDashboard('/dashboard?page=999');
+
+    expect(await screen.findByText('첫 페이지 문서')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('요청한 페이지를 찾지 못해 이전 페이지로 이동했습니다.');
+    expect(screen.getByTestId('location-display')).toHaveTextContent('/dashboard');
   });
 });

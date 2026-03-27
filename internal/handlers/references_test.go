@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 
 	authsession "refentra/internal/auth"
@@ -131,5 +132,14 @@ func TestCreateReferenceWithoutDatabaseReturnsServiceUnavailable(t *testing.T) {
 	expected := `{"error":"Database connection is unavailable"}`
 	if rec.Body.String() != expected+"\n" {
 		t.Fatalf("expected body %s, got %s", expected, rec.Body.String())
+	}
+}
+
+func TestNormalizeReferenceTagsSupportsRepeatedQueryValues(t *testing.T) {
+	tags := normalizeReferenceTags([]string{"Go", "Frontend,React", "Go", "  "})
+
+	expected := []string{"Go", "Frontend", "React"}
+	if !reflect.DeepEqual(tags, expected) {
+		t.Fatalf("expected tags %v, got %v", expected, tags)
 	}
 }

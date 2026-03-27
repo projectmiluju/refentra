@@ -3,6 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 
+const createListResponse = (items: unknown[]) => ({
+  items,
+  page: 1,
+  limit: 10,
+  total_count: items.length,
+  total_pages: items.length > 0 ? 1 : 0,
+  available_tags: ['Go'],
+});
+
 describe('App', () => {
   const fetchMock = vi.fn();
 
@@ -35,7 +44,7 @@ describe('App', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => [],
+        json: async () => createListResponse([]),
       });
 
     render(<App />);
@@ -45,6 +54,63 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: '로그인' }));
 
     expect(await screen.findByRole('heading', { name: '아카이브 (Archive)' })).toBeInTheDocument();
+  });
+
+  it('쿼리가 포함된 보호 URL 접근 후 로그인하면 같은 대시보드 상태로 복귀해야 한다', async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, '', '/dashboard?search=react&tags=Go&page=2');
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'ready', message: 'ok' }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Authentication required' }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ code: 'AUTH_REQUIRED', error: 'Authentication required' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'user-1234', name: '김개발', email: 'dev@refentra.com' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          items: [{
+            id: 'ref-2',
+            title: 'React 문서',
+            url: 'https://example.com/react',
+            description: '설명',
+            tags: ['Go'],
+            uploader_id: 'user-1234',
+            created_at: '2026-03-26T00:00:00Z',
+          }],
+          page: 2,
+          limit: 10,
+          total_count: 11,
+          total_pages: 2,
+          available_tags: ['Go'],
+        }),
+      });
+
+    render(<App />);
+
+    await user.type(await screen.findByLabelText('이메일 주소'), 'dev@refentra.com');
+    await user.type(screen.getByLabelText('비밀번호'), 'password123');
+    await user.click(screen.getByRole('button', { name: '로그인' }));
+
+    expect(await screen.findByRole('heading', { name: 'React 문서' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/dashboard');
+    expect(window.location.search).toBe('?search=react&tags=Go&page=2');
+    expect(fetchMock.mock.calls[4]?.[0]).toContain('search=react');
+    expect(fetchMock.mock.calls[4]?.[0]).toContain('tags=Go');
+    expect(fetchMock.mock.calls[4]?.[0]).toContain('page=2');
   });
 
   it('잘못된 이메일로 로그인하면 에러 메시지를 보여주고 이동하지 않아야 한다', async () => {

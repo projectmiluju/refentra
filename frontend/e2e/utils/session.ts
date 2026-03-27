@@ -20,10 +20,10 @@ export const loginFromPage = async (page: Page): Promise<void> => {
   await page.getByLabel('이메일 주소').fill(LOGIN_EMAIL);
   await page.getByLabel('비밀번호').fill(LOGIN_PASSWORD);
   await page.getByRole('button', { name: '로그인' }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/);
 };
 
 export const logoutFromPage = async (page: Page): Promise<void> => {
   await page.getByRole('button', { name: '로그아웃' }).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login(?:\?.*)?$/);
 };
