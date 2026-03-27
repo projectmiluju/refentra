@@ -6,14 +6,18 @@
 - `Dockerfile`, `docker-compose.prod.yml`, `Caddyfile` 기반 Tier 2 배포 스캐폴드 추가
 - GitHub Actions `ci.yml`, `deploy.yml` 초안 추가
 - VPS 기준 배포 절차와 롤백 전략을 `docs/ops/tier2-vps-deployment.md`로 문서화
+- 서버 보안 설정을 환경변수 기반으로 제어하는 `SecurityConfig`와 관련 테스트 추가
 
 ### 수정
 - `README`에 프로덕션 배포 자산과 보안 전제 조건을 정리
 - `.gitignore`에 `.env.production`을 추가해 운영 시크릿 파일이 추적되지 않도록 보강
+- CORS 허용 오리진, HSTS, CSP, rate limiting이 환경별로 조정 가능하도록 서버 미들웨어 하드닝
+- `.env.example`, `.env.production.example`, 운영 가이드에 보안 관련 변수와 프로덕션 기본값 반영
 
 ### 테스트
 - `docker compose --env-file .env.production.example -f docker-compose.prod.yml config` 통과
 - `docker build -t refentra:qa .` 통과
+- `go test ./...`, `npm test`, `npm run typecheck`, `npm run build` 통과
 - 알려진 이슈: `actionlint` 부재로 GitHub Actions 정적 린트는 아직 미실행
 ## [v0.6.0] - 2026-03-27
 
