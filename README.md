@@ -153,3 +153,19 @@ Docker 기준:
 - `docker compose up -d postgres redis`: 개발용 PostgreSQL/Redis 실행
 - `docker compose down`: 컨테이너 중지
 - `docker compose down -v`: volume까지 삭제하고 초기 상태로 재생성 준비
+
+## 배포 스캐폴드
+- 운영 배포 자산은 아래 파일로 분리되어 있습니다.
+  - [Dockerfile](/Users/wonyong/Desktop/myproject/refentra/Dockerfile)
+  - [docker-compose.prod.yml](/Users/wonyong/Desktop/myproject/refentra/docker-compose.prod.yml)
+  - [Caddyfile](/Users/wonyong/Desktop/myproject/refentra/Caddyfile)
+  - [.env.production.example](/Users/wonyong/Desktop/myproject/refentra/.env.production.example)
+  - [ci.yml](/Users/wonyong/Desktop/myproject/refentra/.github/workflows/ci.yml)
+  - [deploy.yml](/Users/wonyong/Desktop/myproject/refentra/.github/workflows/deploy.yml)
+- 권장 운영 토폴로지는 `Hetzner VPS + Docker Compose + Caddy + 내부 PostgreSQL/Redis`입니다.
+- 실제 배포 절차와 롤백 방식은 [tier2-vps-deployment.md](/Users/wonyong/Desktop/myproject/refentra/docs/ops/tier2-vps-deployment.md)에 정리했습니다.
+- 프로덕션에서는 반드시 아래 조건을 만족해야 합니다.
+  - `AUTH_COOKIE_SECURE=true`
+  - 강한 `AUTH_JWT_SECRET`, `DB_PASSWORD`, `REDIS_PASSWORD`
+  - 실제 도메인과 ACME 이메일 설정
+  - DB/Redis 외부 포트 미노출
