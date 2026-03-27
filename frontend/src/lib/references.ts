@@ -1,4 +1,11 @@
-import type { ReferenceDraft, ReferenceItem, ReferenceResponse } from '../types/reference';
+import type {
+  ReferenceDraft,
+  ReferenceItem,
+  ReferenceListQuery,
+  ReferenceListResponse,
+  ReferenceListResult,
+  ReferenceResponse,
+} from '../types/reference';
 import { fetchWithAuth } from './auth';
 
 const REFERENCE_API_PATH = '/api/v1/references';
@@ -30,15 +37,46 @@ export const mapReferenceResponse = (reference: ReferenceResponse): ReferenceIte
   date: reference.created_at.slice(0, 10),
 });
 
-export const fetchReferences = async (): Promise<ReferenceItem[]> => {
-  const response = await fetchWithAuth(REFERENCE_API_PATH);
+const buildReferenceListQuery = (query: ReferenceListQuery): string => {
+  const params = new URLSearchParams();
+
+  if (query.search && query.search.trim().length > 0) {
+    params.set('search', query.search.trim());
+  }
+
+  if (query.tags && query.tags.length > 0) {
+    params.set('tags', query.tags.join(','));
+  }
+
+  if (query.page && query.page > 0) {
+    params.set('page', String(query.page));
+  }
+
+  if (query.limit && query.limit > 0) {
+    params.set('limit', String(query.limit));
+  }
+
+  const serialized = params.toString();
+  return serialized.length > 0 ? `?${serialized}` : '';
+};
+
+export const fetchReferences = async (query: ReferenceListQuery = {}): Promise<ReferenceListResult> => {
+  const response = await fetchWithAuth(`${REFERENCE_API_PATH}${buildReferenceListQuery(query)}`);
 
   if (!response.ok) {
     throw new Error(await toErrorMessage(response, '레퍼런스를 불러오지 못했습니다.'));
   }
 
-  const references = (await response.json()) as ReferenceResponse[];
-  return references.map(mapReferenceResponse);
+  const payload = (await response.json()) as ReferenceListResponse;
+
+  return {
+    items: payload.items.map(mapReferenceResponse),
+    page: payload.page,
+    limit: payload.limit,
+    totalCount: payload.total_count,
+    totalPages: payload.total_pages,
+    availableTags: payload.available_tags,
+  };
 };
 
 export const createReference = async (draft: ReferenceDraft): Promise<ReferenceItem> => {

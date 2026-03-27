@@ -8,6 +8,22 @@ export interface ReferenceItem {
   date: string;
 }
 
+export interface ReferenceListQuery {
+  search?: string;
+  tags?: string[];
+  page?: number;
+  limit?: number;
+}
+
+export interface ReferenceListResult {
+  items: ReferenceItem[];
+  page: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+  availableTags: string[];
+}
+
 export interface ReferenceDraft {
   url: string;
   title: string;
@@ -23,4 +39,13 @@ export interface ReferenceResponse {
   tags: string[];
   uploader_id: string;
   created_at: string;
+}
+
+export interface ReferenceListResponse {
+  items: ReferenceResponse[];
+  page: number;
+  limit: number;
+  total_count: number;
+  total_pages: number;
+  available_tags: string[];
 }

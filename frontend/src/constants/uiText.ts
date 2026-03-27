@@ -15,17 +15,24 @@ export const DASHBOARD_TEXT = {
   addReference: '새 레퍼런스 추가',
   logout: '로그아웃',
   searchPlaceholder: '레퍼런스 검색...',
+  tagSectionTitle: '태그 (Tags)',
   loading: '레퍼런스를 불러오는 중...',
   emptyTitle: '첫 아카이브를 시작해 보세요.',
   emptyDescription: '아직 저장된 레퍼런스가 없습니다. 첫 레퍼런스를 추가하면 팀 아카이브가 채워지기 시작합니다.',
+  noResultsTitle: '검색 결과가 없습니다.',
+  noResultsDescription: '검색어 또는 태그 조건에 맞는 레퍼런스를 찾지 못했습니다. 조건을 지우고 다시 시도해 보세요.',
+  clearFilters: '조건 초기화',
   onboardingChecklistTitle: '처음 시작할 때 추천하는 순서',
   onboardingSteps: [
     '오른쪽 상단의 새 레퍼런스 추가 버튼을 누릅니다.',
     '제목과 URL을 입력하고 팀이 이해할 수 있는 설명을 남깁니다.',
     '검색이 쉬워지도록 태그를 붙여 저장합니다.',
   ],
+  noTags: '아직 사용할 수 있는 태그가 없습니다.',
+  totalCountSuffix: '개의 레퍼런스',
   retry: '다시 시도',
   loadErrorFallback: '레퍼런스를 불러오지 못했습니다.',
+  paginationLabel: '페이지 이동',
 } as const;
 
 export const REFERENCE_MODAL_TEXT = {

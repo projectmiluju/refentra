@@ -4,16 +4,37 @@ export interface TagBadgeProps {
   label: string;
   onRemove?: () => void;
   className?: string;
+  isActive?: boolean;
+  onClick?: () => void;
 }
 
 const TagBadge: React.FC<TagBadgeProps> = ({ 
   label, 
   onRemove,
-  className = '' 
+  className = '',
+  isActive = false,
+  onClick,
 }) => {
+  const containerClassName = [
+    'inline-flex items-center px-2 py-1 rounded-md text-sm font-jetbrains font-medium transition-colors',
+    isActive ? 'bg-primary text-sys-text' : 'bg-slate-800 text-slate-200',
+    onClick ? 'cursor-pointer hover:border-slate-500 border border-transparent' : '',
+    className,
+  ].filter(Boolean).join(' ');
+
   return (
-    <span 
-      className={`inline-flex items-center px-2 py-1 rounded-md bg-slate-800 text-slate-200 text-sm font-jetbrains font-medium ${className}`}
+    <span
+      className={containerClassName}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-pressed={onClick ? isActive : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      } : undefined}
     >
       <span className="text-nowrap">{label}</span>
       {onRemove && (
