@@ -100,6 +100,7 @@ docker compose up -d postgres redis
 │   ├── devlog/
 │   └── prd/
 ├── frontend/
+│   ├── e2e/
 │   ├── src/
 │   │   ├── components/
 │   │   ├── constants/
@@ -120,7 +121,7 @@ docker compose up -d postgres redis
 
 ## 기술 스택
 - 프론트엔드: React 18, Vite 8, TypeScript, Tailwind CSS
-- 테스트: Vitest, jsdom, Testing Library
+- 테스트: Vitest, jsdom, Testing Library, Playwright
 - 백엔드: Go 1.26, Echo, GORM, JWT
 - 데이터베이스: PostgreSQL 16 (Docker Compose)
 - 세션 저장소: Redis 7 (Docker Compose)
@@ -130,6 +131,7 @@ docker compose up -d postgres redis
 - [저장/조회 연동 PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.1-reference-persistence.md)
 - [로컬 Docker Postgres PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.2-local-dev-docker-postgres.md)
 - [Redis 세션 인증 PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.3-redis-session-auth.md)
+- [브라우저 E2E PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.4-browser-e2e.md)
 
 ## 스크립트
 `frontend/package.json` 기준:
