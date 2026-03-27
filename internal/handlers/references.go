@@ -153,7 +153,7 @@ func (h *ReferenceHandler) GetReferences(c echo.Context) error {
 	var availableTags []string
 	if err := h.DB.Raw(`
 		SELECT DISTINCT jsonb_array_elements_text(tags) AS tag
-		FROM references
+		FROM "references"
 		WHERE deleted_at IS NULL
 		ORDER BY tag ASC
 	`).Scan(&availableTags).Error; err != nil {
