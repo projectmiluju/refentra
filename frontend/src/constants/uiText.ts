@@ -33,6 +33,7 @@ export const DASHBOARD_TEXT = {
   retry: '다시 시도',
   loadErrorFallback: '레퍼런스를 불러오지 못했습니다.',
   paginationLabel: '페이지 이동',
+  invalidPageFallback: '요청한 페이지를 찾지 못해 이전 페이지로 이동했습니다.',
 } as const;
 
 export const REFERENCE_MODAL_TEXT = {

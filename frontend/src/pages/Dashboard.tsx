@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import TagBadge from '../components/common/TagBadge';
@@ -7,6 +8,7 @@ import AddReferenceModal from '../components/modal/AddReferenceModal';
 import { DASHBOARD_TEXT } from '../constants/uiText';
 import type { ReferenceDraft, ReferenceItem, ReferenceListQuery } from '../types/reference';
 import { createReference, fetchReferences } from '../lib/references';
+import { createDashboardSearchParams, parseDashboardSearchParams } from '../lib/dashboardQuery';
 
 interface DashboardProps {
   onLoggedOut: () => Promise<void>;
@@ -16,20 +18,40 @@ const REFERENCE_PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 300;
 
 const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [references, setReferences] = useState<ReferenceItem[]>([]);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [pageNotice, setPageNotice] = useState('');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [searchInput, setSearchInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [lastValidPage, setLastValidPage] = useState<number | null>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const { search: searchQuery, tags: selectedTags, page: currentPage, invalidPage } = parseDashboardSearchParams(searchParams);
 
   const hasActiveFilters = searchQuery.trim().length > 0 || selectedTags.length > 0;
+
+  const updateDashboardQuery = (
+    overrides: Partial<ReferenceListQuery> = {},
+    options: { replace?: boolean } = {},
+  ): void => {
+    const nextParams = createDashboardSearchParams({
+      search: overrides.search ?? searchQuery,
+      tags: overrides.tags ?? selectedTags,
+      page: overrides.page ?? currentPage,
+    });
+    const nextSerialized = nextParams.toString();
+    const currentSerialized = searchParams.toString();
+
+    if (nextSerialized === currentSerialized) {
+      return;
+    }
+
+    setSearchParams(nextParams, { replace: options.replace ?? false });
+  };
 
   const buildReferenceQuery = (overrides: Partial<ReferenceListQuery> = {}): ReferenceListQuery => ({
     search: overrides.search ?? searchQuery,
@@ -39,15 +61,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
   });
 
   const loadReferences = async (overrides: Partial<ReferenceListQuery> = {}): Promise<void> => {
+    const nextQuery = buildReferenceQuery(overrides);
+    const requestedPage = nextQuery.page ?? 1;
+
     try {
       setIsLoading(true);
       setLoadError('');
-      const response = await fetchReferences(buildReferenceQuery(overrides));
+      const response = await fetchReferences(nextQuery);
+
+      const shouldCorrectPage = (response.totalPages === 0 && requestedPage > 1)
+        || (response.totalPages > 0 && requestedPage > response.totalPages);
+
+      if (shouldCorrectPage) {
+        const fallbackPage = lastValidPage ?? 1;
+        setPageNotice(DASHBOARD_TEXT.invalidPageFallback);
+        updateDashboardQuery({ ...nextQuery, page: fallbackPage }, { replace: true });
+        return;
+      }
+
       setReferences(response.items);
       setAvailableTags(response.availableTags);
-      setCurrentPage(response.page);
       setTotalPages(response.totalPages);
       setTotalCount(response.totalCount);
+      setLastValidPage(response.totalPages > 0 ? response.page : 1);
     } catch (error) {
       if (error instanceof Error) {
         setLoadError(error.message);
@@ -61,25 +97,50 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
   };
 
   useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (!invalidPage) {
+      return;
+    }
+
+    setPageNotice(DASHBOARD_TEXT.invalidPageFallback);
+    updateDashboardQuery({ page: lastValidPage ?? 1 }, { replace: true });
+  }, [invalidPage, lastValidPage, searchQuery, selectedTags]);
+
+  useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      setSearchQuery(searchInput.trim());
+      const trimmedSearch = searchInput.trim();
+
+      if (trimmedSearch === searchQuery) {
+        return;
+      }
+
+      setPageNotice('');
+      updateDashboardQuery({ search: trimmedSearch, page: 1 }, { replace: true });
     }, SEARCH_DEBOUNCE_MS);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [searchInput]);
+  }, [searchInput, searchQuery, selectedTags, currentPage]);
 
   useEffect(() => {
+    if (invalidPage) {
+      return;
+    }
+
     void loadReferences();
-  }, [searchQuery, currentPage, selectedTags]);
+  }, [searchQuery, currentPage, selectedTags.join('|'), invalidPage]);
 
   const handleCreateReference = async (draft: ReferenceDraft): Promise<void> => {
     await createReference(draft);
     setIsModalOpen(false);
+    setPageNotice('');
 
     if (currentPage !== 1) {
-      setCurrentPage(1);
+      updateDashboardQuery({ page: 1 });
       return;
     }
 
@@ -97,26 +158,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
 
   const handleSearchChange = (value: string): void => {
     setSearchInput(value);
-    setCurrentPage(1);
+    setPageNotice('');
   };
 
   const handleToggleTag = (tag: string): void => {
-    setSelectedTags((currentTags) => {
-      const hasTag = currentTags.includes(tag);
-      const nextTags = hasTag
-        ? currentTags.filter((currentTag) => currentTag !== tag)
-        : [...currentTags, tag];
-
-      return nextTags;
-    });
-    setCurrentPage(1);
+    setPageNotice('');
+    const hasTag = selectedTags.includes(tag);
+    const nextTags = hasTag
+      ? selectedTags.filter((currentTag) => currentTag !== tag)
+      : [...selectedTags, tag];
+    updateDashboardQuery({ tags: nextTags, page: 1 });
   };
 
   const handleClearFilters = (): void => {
+    setPageNotice('');
     setSearchInput('');
-    setSearchQuery('');
-    setSelectedTags([]);
-    setCurrentPage(1);
+    updateDashboardQuery({ search: '', tags: [], page: 1 });
   };
 
   return (
@@ -166,6 +223,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
 
         {/* List Content */}
         <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-4">
+          {!isLoading && !loadError && pageNotice ? (
+            <div className="bg-surface p-4 rounded-xl border border-error/60">
+              <p className="text-sm text-error text-body-ko" role="alert">
+                {pageNotice}
+              </p>
+            </div>
+          ) : null}
+
           {isLoading ? (
             <div className="bg-surface p-6 rounded-xl border border-slate-800 text-body-ko text-slate-300">
               {DASHBOARD_TEXT.loading}
@@ -241,7 +306,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
                   <button
                     key={pageNumber}
                     type="button"
-                    onClick={() => setCurrentPage(pageNumber)}
+                    onClick={() => {
+                      setPageNotice('');
+                      updateDashboardQuery({ page: pageNumber });
+                    }}
                     className={pageNumber === currentPage
                       ? 'px-3 py-1 rounded bg-surface border border-slate-800 text-sys-text'
                       : 'px-3 py-1 rounded hover:bg-surface border border-transparent text-text-muted'}

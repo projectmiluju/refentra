@@ -45,7 +45,9 @@ const buildReferenceListQuery = (query: ReferenceListQuery): string => {
   }
 
   if (query.tags && query.tags.length > 0) {
-    params.set('tags', query.tags.join(','));
+    query.tags.forEach((tag) => {
+      params.append('tags', tag);
+    });
   }
 
   if (query.page && query.page > 0) {

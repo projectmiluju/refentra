@@ -46,21 +46,32 @@ func parsePositiveInt(value string, fallback int) (int, error) {
 	return parsed, nil
 }
 
-func normalizeReferenceTags(raw string) []string {
-	if strings.TrimSpace(raw) == "" {
+func normalizeReferenceTags(rawValues []string) []string {
+	if len(rawValues) == 0 {
 		return nil
 	}
 
-	segments := strings.Split(raw, ",")
-	result := make([]string, 0, len(segments))
+	result := make([]string, 0, len(rawValues))
+	seen := make(map[string]struct{})
 
-	for _, segment := range segments {
-		trimmed := strings.TrimSpace(segment)
-		if trimmed == "" {
+	for _, rawValue := range rawValues {
+		if strings.TrimSpace(rawValue) == "" {
 			continue
 		}
 
-		result = append(result, trimmed)
+		for _, segment := range strings.Split(rawValue, ",") {
+			trimmed := strings.TrimSpace(segment)
+			if trimmed == "" {
+				continue
+			}
+
+			if _, ok := seen[trimmed]; ok {
+				continue
+			}
+
+			seen[trimmed] = struct{}{}
+			result = append(result, trimmed)
+		}
 	}
 
 	if len(result) == 0 {
@@ -86,7 +97,7 @@ func (h *ReferenceHandler) GetReferences(c echo.Context) error {
 	}
 
 	search := strings.TrimSpace(c.QueryParam("search"))
-	tags := normalizeReferenceTags(c.QueryParam("tags"))
+	tags := normalizeReferenceTags(c.QueryParams()["tags"])
 
 	if h.DB == nil {
 		return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "Database connection is unavailable"})

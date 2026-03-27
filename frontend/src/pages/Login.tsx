@@ -7,10 +7,17 @@ import { login } from '../lib/auth';
 
 interface LoginProps {
   sessionMessage: string;
+  redirectTo?: string;
   onLoginSuccess: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ sessionMessage, onLoginSuccess }) => {
+const DEFAULT_REDIRECT_PATH = '/dashboard';
+
+const resolveRedirectTarget = (redirectTo?: string): string => (
+  redirectTo?.startsWith('/dashboard') ? redirectTo : DEFAULT_REDIRECT_PATH
+);
+
+const Login: React.FC<LoginProps> = ({ sessionMessage, redirectTo, onLoginSuccess }) => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,7 +54,7 @@ const Login: React.FC<LoginProps> = ({ sessionMessage, onLoginSuccess }) => {
       });
       setErrorMessage('');
       onLoginSuccess();
-      navigate('/dashboard');
+      navigate(resolveRedirectTarget(redirectTo), { replace: true });
     } catch (error) {
       if (error instanceof Error) {
         setErrorMessage(error.message);

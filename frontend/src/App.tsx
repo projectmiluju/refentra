@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import { APP_TEXT } from './constants/uiText';
@@ -15,15 +15,58 @@ import {
 type AppBootStatus = 'checking' | 'ready' | 'unavailable';
 type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
 
+const DEFAULT_DASHBOARD_ROUTE = '/dashboard';
+const LOGIN_REDIRECT_PARAM = 'redirect';
+
+const resolveRedirectTarget = (search: string): string => {
+  const redirectTo = new URLSearchParams(search).get(LOGIN_REDIRECT_PARAM);
+  return redirectTo?.startsWith(DEFAULT_DASHBOARD_ROUTE) ? redirectTo : DEFAULT_DASHBOARD_ROUTE;
+};
+
 const RequireAuth: React.FC<{ authenticated: boolean; children: React.ReactElement }> = ({
   authenticated,
   children,
 }) => {
+  const location = useLocation();
+
   if (!authenticated) {
-    return <Navigate to="/login" replace />;
+    const redirectSearch = new URLSearchParams({
+      [LOGIN_REDIRECT_PARAM]: `${location.pathname}${location.search}`,
+    }).toString();
+
+    return (
+      <Navigate
+        to={{
+          pathname: '/login',
+          search: `?${redirectSearch}`,
+        }}
+        replace
+      />
+    );
   }
 
   return children;
+};
+
+const LoginRoute: React.FC<{
+  authenticated: boolean;
+  sessionMessage: string;
+  onLoginSuccess: () => void;
+}> = ({ authenticated, sessionMessage, onLoginSuccess }) => {
+  const location = useLocation();
+  const redirectTo = resolveRedirectTarget(location.search);
+
+  if (authenticated) {
+    return <Navigate to={redirectTo} replace />;
+  }
+
+  return (
+    <Login
+      sessionMessage={sessionMessage}
+      redirectTo={redirectTo}
+      onLoginSuccess={onLoginSuccess}
+    />
+  );
 };
 
 const App: React.FC = () => {
@@ -114,10 +157,9 @@ const App: React.FC = () => {
       <Routes>
         <Route
           path="/login"
-          element={authStatus === 'authenticated' ? (
-            <Navigate to="/dashboard" replace />
-          ) : (
-            <Login
+          element={(
+            <LoginRoute
+              authenticated={authStatus === 'authenticated'}
               sessionMessage={sessionMessage}
               onLoginSuccess={() => {
                 setSessionMessage('');
