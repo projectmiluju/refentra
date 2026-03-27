@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### 추가
+- `Dockerfile`, `docker-compose.prod.yml`, `Caddyfile` 기반 Tier 2 배포 스캐폴드 추가
+- GitHub Actions `ci.yml`, `deploy.yml` 초안 추가
+- VPS 기준 배포 절차와 롤백 전략을 `docs/ops/tier2-vps-deployment.md`로 문서화
+
+### 수정
+- `README`에 프로덕션 배포 자산과 보안 전제 조건을 정리
+- `.gitignore`에 `.env.production`을 추가해 운영 시크릿 파일이 추적되지 않도록 보강
+
+### 테스트
+- `docker compose --env-file .env.production.example -f docker-compose.prod.yml config` 통과
+- `docker build -t refentra:qa .` 통과
+- 알려진 이슈: `actionlint` 부재로 GitHub Actions 정적 린트는 아직 미실행
 ## [v0.6.0] - 2026-03-27
 
 ### 추가
