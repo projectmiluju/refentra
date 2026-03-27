@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v0.6.1] - 2026-03-27
 
 ### 추가
 - `Dockerfile`, `docker-compose.prod.yml`, `Caddyfile` 기반 Tier 2 배포 스캐폴드 추가
@@ -19,6 +19,7 @@
 - `docker build -t refentra:qa .` 통과
 - `go test ./...`, `npm test`, `npm run typecheck`, `npm run build` 통과
 - 알려진 이슈: `actionlint` 부재로 GitHub Actions 정적 린트는 아직 미실행
+
 ## [v0.6.0] - 2026-03-27
 
 ### 추가
