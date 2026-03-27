@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v0.5.1] - 2026-03-27
 
 ### 추가
 - Playwright 기반 브라우저 E2E 테스트 환경 추가
