@@ -8,6 +8,8 @@ export interface ReferenceItem {
   date: string;
 }
 
+export type DashboardMode = 'portfolio' | 'product';
+
 export interface ReferenceListQuery {
   search?: string;
   tags?: string[];

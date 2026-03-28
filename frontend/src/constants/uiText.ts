@@ -14,7 +14,7 @@ export const LANDING_TEXT = {
   eyebrow: 'Reference workflow for product teams',
   title: 'A reference system built for recall.',
   description: 'Refentra keeps search, tags, notes, and retrieval in one controlled workspace so saved references stay useful later.',
-  primaryAction: 'Sign in',
+  primaryAction: 'Open demo',
   secondaryAction: 'View dashboard',
   problemTitle: 'The stack gets noisy long before the work gets clear.',
   problemItems: [
@@ -50,14 +50,18 @@ export const LANDING_TEXT = {
   dashboardPreviewDescription: 'Search, filters, metrics, and pagination stay on the same system so the product flow reads as one piece.',
   ctaTitle: 'A portfolio piece still has to read like product.',
   ctaDescription: 'The goal is control, clarity, and a surface that looks buildable.',
-  finalPrimaryAction: 'Open dashboard',
+  finalPrimaryAction: 'Open demo dashboard',
   finalSecondaryAction: 'Go to sign in',
 } as const;
 
 export const DASHBOARD_TEXT = {
   title: 'Reference Library',
   subtitle: 'Search, filter, and revisit references without noise.',
+  portfolioSubtitle: 'Interactive sample data for portfolio review, with search, tags, and pagination kept live.',
   brandMeta: 'Reference Archive Demo',
+  modeLabel: 'Mode',
+  portfolioMode: 'Portfolio demo',
+  productMode: 'Product data',
   addReference: 'Add reference',
   logout: 'Log out',
   searchPlaceholder: 'Search references',

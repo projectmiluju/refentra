@@ -15,7 +15,8 @@ import (
 )
 
 type ReferenceHandler struct {
-	DB *gorm.DB
+	DB          *gorm.DB
+	createStore referenceCreateStore
 }
 
 type ReferenceListResponse struct {
@@ -32,6 +33,44 @@ const (
 	defaultReferenceLimit = 10
 	maxReferenceLimit     = 50
 )
+
+type referenceCreateStore interface {
+	FindDuplicateReference(uploaderID, url, title string) (*models.Reference, error)
+	CreateReference(ref *models.Reference) error
+}
+
+type gormReferenceCreateStore struct {
+	db *gorm.DB
+}
+
+func (s gormReferenceCreateStore) FindDuplicateReference(uploaderID, url, title string) (*models.Reference, error) {
+	var existing models.Reference
+	err := s.db.
+		Where("uploader_id = ? AND LOWER(url) = ? AND LOWER(title) = ?", uploaderID, strings.ToLower(url), strings.ToLower(title)).
+		First(&existing).
+		Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &existing, nil
+}
+
+func (s gormReferenceCreateStore) CreateReference(ref *models.Reference) error {
+	return s.db.Create(ref).Error
+}
+
+func (h *ReferenceHandler) getReferenceCreateStore() (referenceCreateStore, error) {
+	if h.createStore != nil {
+		return h.createStore, nil
+	}
+
+	if h.DB == nil {
+		return nil, gorm.ErrInvalidDB
+	}
+
+	return gormReferenceCreateStore{db: h.DB}, nil
+}
 
 func parsePositiveInt(value string, fallback int) (int, error) {
 	if strings.TrimSpace(value) == "" {
@@ -200,7 +239,19 @@ func (h *ReferenceHandler) CreateReference(c echo.Context) error {
 		return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "Database connection is unavailable"})
 	}
 
-	if err := h.DB.Create(&ref).Error; err != nil {
+	store, err := h.getReferenceCreateStore()
+	if err != nil {
+		return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "Database connection is unavailable"})
+	}
+
+	if _, err := store.FindDuplicateReference(userID, ref.URL, ref.Title); err == nil {
+		return c.JSON(http.StatusConflict, map[string]string{"error": "This reference already exists"})
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		c.Logger().Errorf("failed to check duplicate reference: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to save reference"})
+	}
+
+	if err := store.CreateReference(&ref); err != nil {
 		c.Logger().Errorf("failed to save reference: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to save reference"})
 	}
