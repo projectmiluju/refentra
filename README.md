@@ -93,6 +93,11 @@ go run .
   - 예: `/dashboard?search=react&tags=Frontend&tags=Docs&page=2`
   - 새로고침하거나 같은 URL을 공유해도 검색어, 태그, 페이지 상태를 복원합니다.
   - 잘못된 페이지 번호는 안내 후 마지막 유효 페이지 또는 `1페이지`로 보정됩니다.
+- 포트폴리오 데모 경로는 실제 제품 데이터와 분리되어 있습니다.
+  - 랜딩의 기본 CTA는 `/dashboard?mode=portfolio` 기준 데모 경로로 연결됩니다.
+  - `mode=portfolio`에서는 샘플 레퍼런스 데이터, 검색, 태그 필터, 페이지네이션, 모달 저장 흐름이 브라우저 내 데모 레이어로 동작합니다.
+  - 기본 `/dashboard`는 기존 제품 모드이며, 서버 API 기준 조회/저장 계약을 유지합니다.
+- `POST /api/v1/references`는 동일 사용자 기준 `url + title` 조합 중복 저장을 서버에서 거절합니다.
 - Playwright는 위 URL 복원 흐름을 실제 브라우저에서 검증합니다.
   - 쿼리 포함 `/dashboard` 직접 진입
   - 로그인 후 같은 검색/태그/페이지 상태 복귀
@@ -151,6 +156,7 @@ docker compose up -d postgres redis
 - [브라우저 E2E PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.4-browser-e2e.md)
 - [검색/필터/페이지네이션 PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.5-search-filter-pagination.md)
 - [대시보드 URL 쿼리 동기화 PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.6-dashboard-url-query-sync.md)
+- [포트폴리오 리디자인 PRD](/Users/wonyong/Desktop/myproject/refentra/docs/prd/refentra-v1.8-portfolio-design-renewal.md)
 
 ## 스크립트
 `frontend/package.json` 기준:
