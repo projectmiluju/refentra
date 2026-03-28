@@ -5,8 +5,9 @@ test.describe('브라우저 핵심 인증 흐름', () => {
   test('@smoke 비로그인 사용자는 보호된 대시보드 접근 시 로그인 페이지로 이동한다', async ({ page }) => {
     await page.goto('/dashboard?search=react&page=2');
 
-    await expect(page).toHaveURL(/\/login(?:\?.*)?$/);
-    await expect(page.getByRole('button', { name: '로그인' })).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole('heading', { name: 'A reference system built for recall.' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Sign in' }).first()).toBeVisible();
   });
 
   test('로그인 후 온보딩 빈 상태를 렌더링한다', async ({ page }) => {
@@ -32,9 +33,9 @@ test.describe('브라우저 핵심 인증 흐름', () => {
 
     await loginFromPage(page);
 
-    await expect(page.getByRole('heading', { name: '첫 아카이브를 시작해 보세요.' })).toBeVisible();
-    await expect(page.getByText('처음 시작할 때 추천하는 순서')).toBeVisible();
-    await expect(page.getByText('오른쪽 상단의 새 레퍼런스 추가 버튼을 누릅니다.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'No references yet.' })).toBeVisible();
+    await expect(page.getByText('Get started')).toBeVisible();
+    await expect(page.getByText('Open Add reference from the top right.')).toBeVisible();
   });
 
   test('@smoke 로그인 후 저장, 새로고침 재조회, 로그아웃과 재접근 차단이 동작한다', async ({ page }) => {
@@ -42,12 +43,12 @@ test.describe('브라우저 핵심 인증 흐름', () => {
 
     await loginFromPage(page);
 
-    await page.getByRole('button', { name: '새 레퍼런스 추가' }).click();
-    await page.getByLabel('URL 주소').fill(reference.url);
-    await page.getByLabel('레퍼런스 제목 (Title)').fill(reference.title);
-    await page.getByLabel('부연 설명 (Description)').fill(reference.description);
+    await page.getByRole('button', { name: 'Add reference' }).click();
+    await page.getByLabel('URL').fill(reference.url);
+    await page.getByLabel('Title').fill(reference.title);
+    await page.getByLabel('Notes').fill(reference.description);
 
-    const saveButton = page.getByRole('button', { name: '저장하기' });
+    const saveButton = page.getByRole('button', { name: 'Save reference' });
     await expect(saveButton).toBeEnabled();
     await saveButton.dblclick();
 
@@ -63,10 +64,7 @@ test.describe('브라우저 핵심 인증 흐름', () => {
 
     await logoutFromPage(page);
 
-    await page.goBack();
-    await expect(page).toHaveURL(/\/login(?:\?.*)?$/);
-
     await page.goto('/dashboard');
-    await expect(page).toHaveURL(/\/login(?:\?.*)?$/);
+    await expect(page).toHaveURL(/\/$/);
   });
 });

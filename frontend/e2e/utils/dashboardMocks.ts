@@ -21,9 +21,9 @@ const DEFAULT_CREATED_AT = '2026-03-27T00:00:00Z';
 
 const createReferenceItem = (overrides: Partial<MockReferenceItem>): MockReferenceItem => ({
   id: overrides.id ?? 'ref-1',
-  title: overrides.title ?? 'React 라우팅 문서',
+  title: overrides.title ?? 'React routing reference',
   url: overrides.url ?? 'https://example.com/react-router',
-  description: overrides.description ?? 'React Router와 URL 상태를 정리한 문서',
+  description: overrides.description ?? 'Reference covering React Router and URL state.',
   tags: overrides.tags ?? ['Frontend'],
   uploader_id: overrides.uploader_id ?? 'user-1234',
   created_at: overrides.created_at ?? DEFAULT_CREATED_AT,
@@ -52,7 +52,7 @@ export const installQueryStateMock = async (page: Page): Promise<void> => {
   const queryItems = [
     createReferenceItem({
       id: 'ref-query',
-      title: 'React 쿼리 상태 문서',
+      title: 'React query state reference',
       url: 'https://example.com/react-query-state',
       tags: ['Frontend', 'Docs'],
     }),
@@ -61,7 +61,7 @@ export const installQueryStateMock = async (page: Page): Promise<void> => {
   const firstPageItems = [
     createReferenceItem({
       id: 'ref-page-1',
-      title: '첫 페이지 문서',
+      title: 'First page reference',
       url: 'https://example.com/page-one',
       tags: ['Frontend'],
     }),

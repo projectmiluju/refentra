@@ -9,7 +9,7 @@ describe('AddReferenceModal', () => {
 
     render(<AddReferenceModal onClose={vi.fn()} onSave={vi.fn().mockResolvedValue(undefined)} />);
 
-    const tagInput = screen.getByLabelText('태그 (Tags)');
+    const tagInput = screen.getByLabelText('Tags');
     await user.type(tagInput, 'Infra{enter}');
     await user.type(tagInput, 'Infra{enter}');
 
@@ -22,10 +22,10 @@ describe('AddReferenceModal', () => {
 
     render(<AddReferenceModal onClose={vi.fn()} onSave={handleSave} />);
 
-    await user.type(screen.getByLabelText('URL 주소'), ' https://example.com/article ');
-    await user.type(screen.getByLabelText('레퍼런스 제목 (Title)'), '  테스트 문서  ');
-    await user.type(screen.getByLabelText('부연 설명 (Description)'), '설명입니다.');
-    await user.click(screen.getByRole('button', { name: '저장하기' }));
+    await user.type(screen.getByLabelText('URL'), ' https://example.com/article ');
+    await user.type(screen.getByLabelText('Title'), '  테스트 문서  ');
+    await user.type(screen.getByLabelText('Notes'), '설명입니다.');
+    await user.click(screen.getByRole('button', { name: 'Save reference' }));
 
     expect(handleSave).toHaveBeenCalledWith({
       url: 'https://example.com/article',
@@ -41,12 +41,12 @@ describe('AddReferenceModal', () => {
 
     render(<AddReferenceModal onClose={vi.fn()} onSave={handleSave} />);
 
-    await user.type(screen.getByLabelText('URL 주소'), 'https://example.com/article');
-    await user.type(screen.getByLabelText('레퍼런스 제목 (Title)'), '테스트 문서');
-    await user.click(screen.getByRole('button', { name: '저장하기' }));
+    await user.type(screen.getByLabelText('URL'), 'https://example.com/article');
+    await user.type(screen.getByLabelText('Title'), '테스트 문서');
+    await user.click(screen.getByRole('button', { name: 'Save reference' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('저장 실패');
-    expect(screen.getByLabelText('URL 주소')).toHaveValue('https://example.com/article');
-    expect(screen.getByLabelText('레퍼런스 제목 (Title)')).toHaveValue('테스트 문서');
+    expect(screen.getByLabelText('URL')).toHaveValue('https://example.com/article');
+    expect(screen.getByLabelText('Title')).toHaveValue('테스트 문서');
   });
 });

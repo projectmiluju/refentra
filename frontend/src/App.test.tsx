@@ -49,11 +49,11 @@ describe('App', () => {
 
     render(<App />);
 
-    await user.type(await screen.findByLabelText('이메일 주소'), 'dev@refentra.com');
-    await user.type(screen.getByLabelText('비밀번호'), 'password123');
-    await user.click(screen.getByRole('button', { name: '로그인' }));
+    await user.type(await screen.findByLabelText('Email address'), 'dev@refentra.com');
+    await user.type(screen.getByLabelText('Password'), 'password123');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    expect(await screen.findByRole('heading', { name: '아카이브 (Archive)' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Reference Library' })).toBeInTheDocument();
   });
 
   it('쿼리가 포함된 보호 URL 접근 후 로그인하면 같은 대시보드 상태로 복귀해야 한다', async () => {
@@ -101,9 +101,11 @@ describe('App', () => {
 
     render(<App />);
 
-    await user.type(await screen.findByLabelText('이메일 주소'), 'dev@refentra.com');
-    await user.type(screen.getByLabelText('비밀번호'), 'password123');
-    await user.click(screen.getByRole('button', { name: '로그인' }));
+    expect(await screen.findByRole('heading', { name: 'A reference system built for recall.' })).toBeInTheDocument();
+    await user.click(screen.getAllByRole('link', { name: 'Sign in' })[0]);
+    await user.type(await screen.findByLabelText('Email address'), 'dev@refentra.com');
+    await user.type(screen.getByLabelText('Password'), 'password123');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
     expect(await screen.findByRole('heading', { name: 'React 문서' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/dashboard');
@@ -130,12 +132,12 @@ describe('App', () => {
 
     render(<App />);
 
-    await user.type(await screen.findByLabelText('이메일 주소'), 'invalid-email');
-    await user.type(screen.getByLabelText('비밀번호'), 'password123');
-    await user.click(screen.getByRole('button', { name: '로그인' }));
+    await user.type(await screen.findByLabelText('Email address'), 'invalid-email');
+    await user.type(screen.getByLabelText('Password'), 'password123');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('올바른 이메일 주소를 입력해 주세요.');
-    expect(screen.queryByRole('heading', { name: '아카이브 (Archive)' })).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a valid email address.');
+    expect(screen.queryByRole('heading', { name: 'Reference Library' })).not.toBeInTheDocument();
   });
 
   it('DB가 준비되지 않았으면 설정 안내 페이지를 보여줘야 한다', async () => {
@@ -143,15 +145,15 @@ describe('App', () => {
       ok: false,
       json: async () => ({
         status: 'unavailable',
-        message: '데이터베이스가 준비되지 않았습니다.',
+        message: 'The database is not ready.',
         setup_steps: ['docker compose up -d postgres'],
       }),
     });
 
     render(<App />);
 
-    expect(await screen.findByRole('heading', { name: '데이터베이스 설정이 필요합니다.' })).toBeInTheDocument();
-    expect(screen.getByText('데이터베이스가 준비되지 않았습니다.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Database setup is required.' })).toBeInTheDocument();
+    expect(screen.getByText('The database is not ready.')).toBeInTheDocument();
     expect(screen.getByText('docker compose up -d postgres')).toBeInTheDocument();
   });
 });

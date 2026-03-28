@@ -8,24 +8,24 @@ test.describe('대시보드 URL 상태 복원', () => {
 
     await page.goto('/dashboard?search=react&tags=Frontend&tags=Docs&page=2');
 
-    await expect(page).toHaveURL(/\/login(?:\?.*)?$/);
-    await expect(page.getByRole('button', { name: '로그인' })).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole('heading', { name: 'A reference system built for recall.' })).toBeVisible();
 
     await loginWithApi(page);
     await page.goto('/dashboard?search=react&tags=Frontend&tags=Docs&page=2');
-    await expect(page.getByRole('heading', { name: '아카이브 (Archive)' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Reference Library' })).toBeVisible();
 
     await expect(page).toHaveURL(/\/dashboard\?search=react&tags=Frontend&tags=Docs&page=2$/);
-    await expect(page.getByPlaceholder('레퍼런스 검색...')).toHaveValue('react');
+    await expect(page.getByPlaceholder('Search references')).toHaveValue('react');
     await expect(page.getByRole('button', { name: 'Frontend' })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByRole('button', { name: 'Docs' })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByRole('button', { name: '2' })).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('heading', { name: 'React 쿼리 상태 문서' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'React query state reference' })).toBeVisible();
 
     await page.reload();
 
     await expect(page).toHaveURL(/\/dashboard\?search=react&tags=Frontend&tags=Docs&page=2$/);
-    await expect(page.getByPlaceholder('레퍼런스 검색...')).toHaveValue('react');
+    await expect(page.getByPlaceholder('Search references')).toHaveValue('react');
     await expect(page.getByRole('button', { name: 'Frontend' })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByRole('button', { name: 'Docs' })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByRole('button', { name: '2' })).toHaveAttribute('aria-current', 'page');
@@ -36,15 +36,15 @@ test.describe('대시보드 URL 상태 복원', () => {
 
     await page.goto('/dashboard?search=react&page=999');
 
-    await expect(page).toHaveURL(/\/login(?:\?.*)?$/);
+    await expect(page).toHaveURL(/\/$/);
 
     await loginWithApi(page);
     await page.goto('/dashboard?search=react&page=999');
-    await expect(page.getByRole('heading', { name: '아카이브 (Archive)' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Reference Library' })).toBeVisible();
 
     await expect(page).toHaveURL(/\/dashboard\?search=react$/);
-    await expect(page.getByRole('alert')).toContainText('요청한 페이지를 찾지 못해 이전 페이지로 이동했습니다.');
+    await expect(page.getByRole('alert')).toContainText('The requested page was not available, so the list returned to the previous page.');
     await expect(page.getByRole('button', { name: '1' })).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('heading', { name: '첫 페이지 문서' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'First page reference' })).toBeVisible();
   });
 });

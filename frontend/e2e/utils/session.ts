@@ -9,29 +9,29 @@ export const createUniqueReference = () => {
   const suffix = uniqueSuffix();
 
   return {
-    title: `E2E 저장 검증 ${suffix}`,
+    title: `E2E reference ${suffix}`,
     url: `https://example.com/e2e-${suffix}`,
-    description: `브라우저 E2E 테스트 설명 ${suffix}`,
+    description: `Browser E2E description ${suffix}`,
   };
 };
 
 export const loginFromPage = async (page: Page): Promise<void> => {
   await page.goto('/login');
-  await page.getByLabel('이메일 주소').fill(LOGIN_EMAIL);
-  await page.getByLabel('비밀번호').fill(LOGIN_PASSWORD);
-  await page.getByRole('button', { name: '로그인' }).click();
+  await page.getByLabel('Email address').fill(LOGIN_EMAIL);
+  await page.getByLabel('Password').fill(LOGIN_PASSWORD);
+  await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/);
 };
 
 export const logoutFromPage = async (page: Page): Promise<void> => {
-  await page.getByRole('button', { name: '로그아웃' }).click();
-  await expect(page).toHaveURL(/\/login(?:\?.*)?$/);
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await expect(page).toHaveURL(/\/$/);
 };
 
 export const loginFromCurrentPage = async (page: Page): Promise<void> => {
-  await page.getByLabel('이메일 주소').fill(LOGIN_EMAIL);
-  await page.getByLabel('비밀번호').fill(LOGIN_PASSWORD);
-  await page.getByRole('button', { name: '로그인' }).click();
+  await page.getByLabel('Email address').fill(LOGIN_EMAIL);
+  await page.getByLabel('Password').fill(LOGIN_PASSWORD);
+  await page.getByRole('button', { name: 'Sign in' }).click();
 };
 
 export const loginWithApi = async (page: Page): Promise<void> => {

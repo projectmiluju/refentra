@@ -73,7 +73,7 @@ describe('Dashboard', () => {
 
     renderDashboard();
 
-    expect(screen.getByText('레퍼런스를 불러오는 중...')).toBeInTheDocument();
+    expect(screen.getByText('Loading references...')).toBeInTheDocument();
     expect(await screen.findByText('서버 문서')).toBeInTheDocument();
     expect(screen.getByText('user-1234')).toBeInTheDocument();
   });
@@ -87,8 +87,8 @@ describe('Dashboard', () => {
 
     renderDashboard();
 
-    expect(await screen.findByText('첫 아카이브를 시작해 보세요.')).toBeInTheDocument();
-    expect(screen.getByText('처음 시작할 때 추천하는 순서')).toBeInTheDocument();
+    expect(await screen.findByText('No references yet.')).toBeInTheDocument();
+    expect(screen.getByText('Get started')).toBeInTheDocument();
   });
 
   it('조회 실패 시 에러 메시지와 다시 시도 버튼을 표시해야 한다', async () => {
@@ -110,9 +110,9 @@ describe('Dashboard', () => {
 
     expect(await screen.findByText('DB 연결 실패')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: '다시 시도' }));
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
 
-    expect(await screen.findByText('첫 아카이브를 시작해 보세요.')).toBeInTheDocument();
+    expect(await screen.findByText('No references yet.')).toBeInTheDocument();
   });
 
   it('저장 성공 시 서버 응답 기준으로 목록 상단에 레퍼런스를 추가해야 한다', async () => {
@@ -151,12 +151,12 @@ describe('Dashboard', () => {
 
     renderDashboard();
 
-    await screen.findByText('첫 아카이브를 시작해 보세요.');
-    await user.click(screen.getByRole('button', { name: '새 레퍼런스 추가' }));
-    await user.type(screen.getByLabelText('URL 주소'), 'https://example.com/new');
-    await user.type(screen.getByLabelText('레퍼런스 제목 (Title)'), '새 문서');
-    await user.type(screen.getByLabelText('부연 설명 (Description)'), '새 설명');
-    await user.click(screen.getByRole('button', { name: '저장하기' }));
+    await screen.findByText('No references yet.');
+    await user.click(screen.getByRole('button', { name: 'Add reference' }));
+    await user.type(screen.getByLabelText('URL'), 'https://example.com/new');
+    await user.type(screen.getByLabelText('Title'), '새 문서');
+    await user.type(screen.getByLabelText('Notes'), '새 설명');
+    await user.click(screen.getByRole('button', { name: 'Save reference' }));
 
     expect(await screen.findByText('새 문서')).toBeInTheDocument();
     expect(screen.getByText('user-1234')).toBeInTheDocument();
@@ -179,14 +179,14 @@ describe('Dashboard', () => {
 
     renderDashboard();
 
-    await screen.findByText('첫 아카이브를 시작해 보세요.');
-    await user.click(screen.getByRole('button', { name: '새 레퍼런스 추가' }));
-    await user.type(screen.getByLabelText('URL 주소'), 'https://example.com/new');
-    await user.type(screen.getByLabelText('레퍼런스 제목 (Title)'), '새 문서');
-    await user.click(screen.getByRole('button', { name: '저장하기' }));
+    await screen.findByText('No references yet.');
+    await user.click(screen.getByRole('button', { name: 'Add reference' }));
+    await user.type(screen.getByLabelText('URL'), 'https://example.com/new');
+    await user.type(screen.getByLabelText('Title'), '새 문서');
+    await user.click(screen.getByRole('button', { name: 'Save reference' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Failed to save reference');
-    expect(screen.getByLabelText('URL 주소')).toHaveValue('https://example.com/new');
+    expect(screen.getByLabelText('URL')).toHaveValue('https://example.com/new');
   });
 
   it('저장 중에는 중복 제출을 막아야 한다', async () => {
@@ -221,14 +221,14 @@ describe('Dashboard', () => {
 
     renderDashboard();
 
-    await screen.findByText('첫 아카이브를 시작해 보세요.');
-    await user.click(screen.getByRole('button', { name: '새 레퍼런스 추가' }));
-    await user.type(screen.getByLabelText('URL 주소'), 'https://example.com/new');
-    await user.type(screen.getByLabelText('레퍼런스 제목 (Title)'), '새 문서');
-    await user.click(screen.getByRole('button', { name: '저장하기' }));
+    await screen.findByText('No references yet.');
+    await user.click(screen.getByRole('button', { name: 'Add reference' }));
+    await user.type(screen.getByLabelText('URL'), 'https://example.com/new');
+    await user.type(screen.getByLabelText('Title'), '새 문서');
+    await user.click(screen.getByRole('button', { name: 'Save reference' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '저장 중...' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Saving...' })).toBeDisabled();
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
@@ -258,7 +258,7 @@ describe('Dashboard', () => {
     renderDashboard();
 
     expect(await screen.findByText('Database connection is unavailable')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 
   it('검색어를 입력하면 서버 조회를 다시 호출하고 결과 없음 상태를 표시해야 한다', async () => {
@@ -288,10 +288,10 @@ describe('Dashboard', () => {
     renderDashboard();
 
     await screen.findByText('React 패턴');
-    await user.type(screen.getByPlaceholderText('레퍼런스 검색...'), 'golang');
+    await user.type(screen.getByPlaceholderText('Search references'), 'golang');
 
-    expect(await screen.findByText('검색 결과가 없습니다.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '조건 초기화' })).toBeInTheDocument();
+    expect(await screen.findByText('No results found.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -366,7 +366,7 @@ describe('Dashboard', () => {
     expect(fetchMock.mock.calls[0]?.[0]).toContain('tags=Go');
     expect(fetchMock.mock.calls[0]?.[0]).toContain('tags=Frontend');
     expect(fetchMock.mock.calls[0]?.[0]).toContain('page=2');
-    expect(screen.getByPlaceholderText('레퍼런스 검색...')).toHaveValue('react');
+    expect(screen.getByPlaceholderText('Search references')).toHaveValue('react');
     expect(screen.getByTestId('location-display')).toHaveTextContent('/dashboard?search=react&tags=Go&tags=Frontend&page=2');
   });
 
@@ -412,7 +412,7 @@ describe('Dashboard', () => {
     await user.click(screen.getByRole('button', { name: '2' }));
 
     expect(await screen.findByText('두 번째 페이지 문서')).toBeInTheDocument();
-    expect(screen.getByText('12개의 레퍼런스')).toBeInTheDocument();
+    expect(screen.getByText('12 references')).toBeInTheDocument();
     expect(fetchMock.mock.calls[1]?.[0]).toContain('page=2');
     expect(screen.getByTestId('location-display')).toHaveTextContent('/dashboard?page=2');
   });
@@ -470,7 +470,7 @@ describe('Dashboard', () => {
     renderDashboard();
 
     await screen.findByText('React 패턴');
-    await user.type(screen.getByPlaceholderText('레퍼런스 검색...'), 'go');
+    await user.type(screen.getByPlaceholderText('Search references'), 'go');
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -521,7 +521,7 @@ describe('Dashboard', () => {
     renderDashboard('/dashboard?page=999');
 
     expect(await screen.findByText('첫 페이지 문서')).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent('요청한 페이지를 찾지 못해 이전 페이지로 이동했습니다.');
+    expect(screen.getByRole('alert')).toHaveTextContent('The requested page was not available, so the list returned to the previous page.');
     expect(screen.getByTestId('location-display')).toHaveTextContent('/dashboard');
   });
 });
