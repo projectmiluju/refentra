@@ -20,7 +20,7 @@ type RefreshResult =
 
 const AUTH_API_PATH = '/api/v1/auth';
 const SESSION_EXPIRED_EVENT = 'refentra:session-expired';
-const SESSION_EXPIRED_MESSAGE = '세션이 만료되었습니다.';
+const SESSION_EXPIRED_MESSAGE = 'Your session has expired.';
 
 let refreshPromise: Promise<RefreshResult> | null = null;
 
@@ -58,7 +58,7 @@ export const login = async (request: LoginRequest): Promise<AuthenticatedUser> =
 
   if (!response.ok) {
     const errorBody = await readErrorResponse(response);
-    throw new Error(errorBody.error ?? '로그인에 실패했습니다.');
+    throw new Error(errorBody.error ?? 'Failed to sign in.');
   }
 
   return (await response.json()) as AuthenticatedUser;
@@ -105,7 +105,7 @@ export const fetchCurrentUser = async (): Promise<{ user: AuthenticatedUser | nu
 
   if (response.status !== 401) {
     const errorBody = await readErrorResponse(response);
-    throw new Error(errorBody.error ?? '로그인 상태를 확인하지 못했습니다.');
+    throw new Error(errorBody.error ?? 'Failed to verify the current session.');
   }
 
   const refreshResult = await refreshSession();

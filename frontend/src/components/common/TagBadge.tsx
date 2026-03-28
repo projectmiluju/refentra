@@ -16,11 +16,15 @@ const TagBadge: React.FC<TagBadgeProps> = ({
   onClick,
 }) => {
   const containerClassName = [
-    'inline-flex items-center px-2 py-1 rounded-md text-sm font-jetbrains font-medium transition-colors',
-    isActive ? 'bg-primary text-sys-text' : 'bg-slate-800 text-slate-200',
-    onClick ? 'cursor-pointer hover:border-slate-500 border border-transparent' : '',
+    'inline-flex min-h-[40px] min-w-[72px] items-center justify-center gap-1 rounded-md border px-3 py-2 text-xs font-jetbrains font-medium uppercase tracking-[0.08em] transition-colors',
+    isActive
+      ? 'border-primary bg-primary text-white'
+      : 'border-border/70 bg-surface text-sys-text',
+    onClick ? 'cursor-pointer hover:bg-surface-soft' : '',
     className,
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <span
@@ -41,8 +45,8 @@ const TagBadge: React.FC<TagBadgeProps> = ({
         <button
           type="button"
           onClick={onRemove}
-          className="ml-1.5 focus:outline-none hover:text-slate-400 text-slate-500"
-          aria-label={`${label} 태그 삭제`}
+          className="ml-1 text-text-muted focus:outline-none hover:text-sys-text"
+          aria-label={`Remove ${label} tag`}
         >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>

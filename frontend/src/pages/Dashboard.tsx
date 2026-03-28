@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -178,23 +178,179 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
     updateDashboardQuery({ search: '', tags: [], page: 1 });
   };
 
-  return (
-    <div className="flex h-screen w-full bg-background text-sys-text">
-      {/* Sidebar */}
-      <aside className="w-72 bg-surface border-r border-slate-800 p-6 flex flex-col shrink-0">
-        <h2 className="text-xl font-pretendard font-bold mb-6">Refentra</h2>
-        <div className="relative mb-8">
-          <Input
-            placeholder={DASHBOARD_TEXT.searchPlaceholder}
-            className="pl-10"
-            value={searchInput}
-            onChange={(event) => handleSearchChange(event.target.value)}
-          />
-          <Search className="absolute left-3 top-2.5 w-5 h-5 text-text-muted" />
+  const renderContent = (): React.ReactNode => {
+    if (isLoading) {
+      return (
+        <div className="rounded-xl border border-border/70 bg-surface px-5 py-5 text-sm text-text-muted">
+          {DASHBOARD_TEXT.loading}
         </div>
-        
-        <div className="flex-1">
-          <h3 className="text-sm font-medium text-text-muted mb-4">{DASHBOARD_TEXT.tagSectionTitle}</h3>
+      );
+    }
+
+    if (loadError) {
+      return (
+        <div className="flex flex-col items-start gap-4 rounded-xl border border-error/40 bg-surface px-5 py-5">
+          <p className="text-sm text-error">{loadError}</p>
+          <Button type="button" onClick={() => { void loadReferences(); }}>
+            {DASHBOARD_TEXT.retry}
+          </Button>
+        </div>
+      );
+    }
+
+    if (references.length === 0) {
+      return (
+        <div className="rounded-xl border border-border/70 bg-surface px-5 py-5">
+          {hasActiveFilters ? (
+            <div className="flex flex-col gap-3">
+              <h3 className="text-xl font-semibold">{DASHBOARD_TEXT.noResultsTitle}</h3>
+              <p className="text-sm leading-7 text-text-muted">{DASHBOARD_TEXT.noResultsDescription}</p>
+              <div>
+                <Button type="button" onClick={handleClearFilters}>
+                  {DASHBOARD_TEXT.clearFilters}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div>
+                <h3 className="text-xl font-semibold">{DASHBOARD_TEXT.emptyTitle}</h3>
+                <p className="mt-3 text-sm leading-7 text-text-muted">{DASHBOARD_TEXT.emptyDescription}</p>
+              </div>
+              <div>
+                <p className="ui-label">{DASHBOARD_TEXT.onboardingChecklistTitle}</p>
+                <ul className="mt-3 flex list-disc flex-col gap-2 pl-5 text-sm leading-7 text-text-muted">
+                  {DASHBOARD_TEXT.onboardingSteps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div className="overflow-hidden rounded-xl border border-border/70 bg-surface">
+          <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_180px] gap-4 border-b border-border/70 px-5 py-3 lg:grid">
+            <p className="ui-label">Reference</p>
+            <p className="ui-label">Tags</p>
+            <p className="ui-label">Meta</p>
+          </div>
+          <div className="divide-y divide-border/70">
+            {references.map((ref) => (
+              <article key={ref.id} className="px-5 py-4 transition-colors hover:bg-surface-soft/60">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_180px] lg:items-center">
+                  <div className="min-w-0">
+                    <h3 className="text-[17px] font-semibold leading-6">{ref.title}</h3>
+                    <a
+                      href={ref.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 block font-jetbrains text-[11px] uppercase tracking-[0.12em] text-text-muted hover:text-primary"
+                    >
+                      {ref.url}
+                    </a>
+                    <p className="mt-2 text-sm leading-6 text-text-muted">{ref.description || '-'}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {ref.tags.map((tag) => <TagBadge key={tag} label={tag} />)}
+                  </div>
+                  <div className="font-jetbrains text-[11px] uppercase tracking-[0.12em] text-text-muted lg:text-right">
+                    <p>{ref.uploader}</p>
+                    <p className="mt-2">{ref.date}</p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        {totalPages > 1 ? (
+          <div className="flex flex-col items-center gap-3" aria-label={DASHBOARD_TEXT.paginationLabel}>
+            <p className="text-sm text-text-muted">{`${totalCount}${DASHBOARD_TEXT.totalCountSuffix}`}</p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  onClick={() => {
+                    setPageNotice('');
+                    updateDashboardQuery({ page: pageNumber });
+                  }}
+                  className={pageNumber === currentPage
+                    ? 'min-h-[44px] min-w-[44px] rounded-md border border-primary bg-primary px-3 text-sm text-white'
+                    : 'min-h-[44px] min-w-[44px] rounded-md border border-border/70 bg-surface px-3 text-sm text-sys-text hover:bg-surface-soft'}
+                  aria-current={pageNumber === currentPage ? 'page' : undefined}
+                >
+                  {pageNumber}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-background text-sys-text">
+      <header className="border-b border-border/60 bg-background">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-6 lg:px-10">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="ui-label">{DASHBOARD_TEXT.brandMeta}</p>
+              <h1 className="mt-4 text-3xl font-semibold tracking-[-0.03em]">{DASHBOARD_TEXT.title}</h1>
+              <p className="mt-4 text-base leading-8 text-text-muted">{DASHBOARD_TEXT.subtitle}</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="ghost" onClick={() => { void handleLogout(); }} isLoading={isLoggingOut}>
+                {DASHBOARD_TEXT.logout}
+              </Button>
+              <Button onClick={() => setIsModalOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                {DASHBOARD_TEXT.addReference}
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-surface px-4 py-3">
+            <Search className="h-4 w-4 text-text-muted" />
+            <Input
+              aria-label={DASHBOARD_TEXT.searchPlaceholder}
+              placeholder={DASHBOARD_TEXT.searchPlaceholder}
+              className="min-h-0 border-0 bg-transparent px-0 py-0 shadow-none focus:border-0 focus:ring-0"
+              value={searchInput}
+              onChange={(event) => handleSearchChange(event.target.value)}
+            />
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-[280px_1fr] lg:px-10">
+        <aside className="space-y-4 rounded-xl border border-border/70 bg-surface-soft p-5">
+          <div>
+            <p className="ui-label">{DASHBOARD_TEXT.tagSectionTitle}</p>
+            <p className="mt-3 text-sm leading-7 text-text-muted">{DASHBOARD_TEXT.filterDescription}</p>
+          </div>
+
+          <div className="grid gap-3">
+            <div className="rounded-xl border border-border/70 bg-surface px-4 py-4">
+              <p className="ui-label">{DASHBOARD_TEXT.metricSaved}</p>
+              <p className="mt-3 font-jetbrains text-3xl text-sys-text">{totalCount}</p>
+            </div>
+            <div className="rounded-xl border border-border/70 bg-surface px-4 py-4">
+              <p className="ui-label">{DASHBOARD_TEXT.metricFiltered}</p>
+              <p className="mt-3 font-jetbrains text-3xl text-sys-text">{references.length}</p>
+            </div>
+            <div className="rounded-xl border border-border/70 bg-surface px-4 py-4">
+              <p className="ui-label">{DASHBOARD_TEXT.metricTags}</p>
+              <p className="mt-3 font-jetbrains text-3xl text-sys-text">{availableTags.length}</p>
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-2">
             {availableTags.length > 0 ? availableTags.map((tag) => (
               <TagBadge
@@ -204,129 +360,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
                 onClick={() => handleToggleTag(tag)}
               />
             )) : (
-              <p className="text-sm text-text-muted text-body-ko">{DASHBOARD_TEXT.noTags}</p>
+              <p className="text-sm text-text-muted">{DASHBOARD_TEXT.noTags}</p>
             )}
           </div>
-        </div>
-      </aside>
+        </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
-        {/* Header */}
-        <header className="h-20 border-b border-slate-800 flex items-center justify-between px-8 shrink-0 bg-background/80 backdrop-blur-md">
-          <h1 className="text-2xl font-pretendard font-semibold">{DASHBOARD_TEXT.title}</h1>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => { void handleLogout(); }} isLoading={isLoggingOut}>
-              {DASHBOARD_TEXT.logout}
-            </Button>
-            <Button onClick={() => setIsModalOpen(true)}>{DASHBOARD_TEXT.addReference}</Button>
-          </div>
-        </header>
-
-        {/* List Content */}
-        <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-4">
-          {!isLoading && !loadError && pageNotice ? (
-            <div className="bg-surface p-4 rounded-xl border border-error/60">
-              <p className="text-sm text-error text-body-ko" role="alert">
+        <main className="space-y-4">
+          {pageNotice ? (
+            <div className="rounded-xl border border-error/40 bg-surface px-4 py-4">
+              <p className="text-sm text-error" role="alert">
                 {pageNotice}
               </p>
             </div>
           ) : null}
 
-          {isLoading ? (
-            <div className="bg-surface p-6 rounded-xl border border-slate-800 text-body-ko text-slate-300">
-              {DASHBOARD_TEXT.loading}
-            </div>
-          ) : null}
+          {renderContent()}
+        </main>
+      </div>
 
-          {!isLoading && loadError ? (
-            <div className="bg-surface p-6 rounded-xl border border-error flex flex-col items-start gap-4">
-              <p className="text-body-ko text-error">{loadError}</p>
-              <Button type="button" onClick={() => { void loadReferences(); }}>
-                {DASHBOARD_TEXT.retry}
-              </Button>
-            </div>
-          ) : null}
-
-          {!isLoading && !loadError && references.length === 0 ? (
-            <div className="bg-surface p-6 rounded-xl border border-slate-800 flex flex-col gap-2">
-              {hasActiveFilters ? (
-                <>
-                  <h3 className="text-xl font-pretendard font-bold">{DASHBOARD_TEXT.noResultsTitle}</h3>
-                  <p className="text-body-ko text-slate-300">{DASHBOARD_TEXT.noResultsDescription}</p>
-                  <div className="mt-3">
-                    <Button type="button" onClick={handleClearFilters}>
-                      {DASHBOARD_TEXT.clearFilters}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h3 className="text-xl font-pretendard font-bold">{DASHBOARD_TEXT.emptyTitle}</h3>
-                  <p className="text-body-ko text-slate-300">{DASHBOARD_TEXT.emptyDescription}</p>
-                  <div className="mt-3">
-                    <h4 className="text-sm font-medium text-text-muted mb-2">{DASHBOARD_TEXT.onboardingChecklistTitle}</h4>
-                    <ul className="flex flex-col gap-2 text-body-ko text-slate-300 list-disc pl-5">
-                      {DASHBOARD_TEXT.onboardingSteps.map((step) => (
-                        <li key={step}>{step}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </>
-              )}
-            </div>
-          ) : null}
-
-          {!isLoading && !loadError ? references.map((ref) => (
-            <div key={ref.id} className="bg-surface p-6 rounded-xl border border-slate-800 hover:border-slate-600 transition-colors">
-              <h3 className="text-xl font-pretendard font-bold mb-1">{ref.title}</h3>
-              <a href={ref.url} target="_blank" rel="noreferrer" className="text-text-muted text-sm text-nowrap hover:text-primary transition-colors block mb-3">
-                {ref.url}
-              </a>
-              <p className="text-body-ko text-slate-300 mb-4 line-clamp-2">
-                {ref.description || '-'}
-              </p>
-
-              <div className="flex items-center justify-between mt-auto">
-                <div className="flex gap-2">
-                  {ref.tags.map((tag) => <TagBadge key={tag} label={tag} />)}
-                </div>
-                <div className="text-sm text-text-muted font-jetbrains space-x-3">
-                  <span>{ref.uploader}</span>
-                  <span>{ref.date}</span>
-                </div>
-              </div>
-            </div>
-          )) : null}
-
-          {/* Pagination (Visual) */}
-          {!isLoading && !loadError && totalPages > 1 ? (
-            <div className="mt-8 flex flex-col items-center justify-center gap-3" aria-label={DASHBOARD_TEXT.paginationLabel}>
-              <p className="text-sm text-text-muted">{`${totalCount}${DASHBOARD_TEXT.totalCountSuffix}`}</p>
-              <div className="flex items-center justify-center gap-2">
-                {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
-                  <button
-                    key={pageNumber}
-                    type="button"
-                    onClick={() => {
-                      setPageNotice('');
-                      updateDashboardQuery({ page: pageNumber });
-                    }}
-                    className={pageNumber === currentPage
-                      ? 'px-3 py-1 rounded bg-surface border border-slate-800 text-sys-text'
-                      : 'px-3 py-1 rounded hover:bg-surface border border-transparent text-text-muted'}
-                    aria-current={pageNumber === currentPage ? 'page' : undefined}
-                  >
-                    {pageNumber}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </main>
-
-      {isModalOpen && <AddReferenceModal onClose={() => setIsModalOpen(false)} onSave={handleCreateReference} />}
+      {isModalOpen ? <AddReferenceModal onClose={() => setIsModalOpen(false)} onSave={handleCreateReference} /> : null}
     </div>
   );
 };

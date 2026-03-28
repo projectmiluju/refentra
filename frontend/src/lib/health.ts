@@ -14,7 +14,7 @@ export const fetchHealthStatus = async (): Promise<HealthStatus> => {
     if (!response.ok) {
       return {
         status: 'unavailable',
-        message: healthStatus.message || '데이터베이스가 준비되지 않았습니다.',
+        message: healthStatus.message || 'The database is not ready.',
         setup_steps: healthStatus.setup_steps,
       };
     }
@@ -23,7 +23,7 @@ export const fetchHealthStatus = async (): Promise<HealthStatus> => {
   } catch {
     return {
       status: 'unavailable',
-      message: '백엔드 서버 또는 데이터베이스가 준비되지 않았습니다.',
+      message: 'The backend server or database is not ready.',
     };
   }
 };

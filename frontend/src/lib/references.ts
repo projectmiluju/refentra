@@ -66,7 +66,7 @@ export const fetchReferences = async (query: ReferenceListQuery = {}): Promise<R
   const response = await fetchWithAuth(`${REFERENCE_API_PATH}${buildReferenceListQuery(query)}`);
 
   if (!response.ok) {
-    throw new Error(await toErrorMessage(response, '레퍼런스를 불러오지 못했습니다.'));
+    throw new Error(await toErrorMessage(response, 'Failed to load references.'));
   }
 
   const payload = (await response.json()) as ReferenceListResponse;
@@ -92,10 +92,10 @@ export const createReference = async (draft: ReferenceDraft): Promise<ReferenceI
 
   if (!response.ok) {
     if (response.status >= 500) {
-      throw new Error(await toErrorMessage(response, '저장에 실패했습니다. 다시 시도해 주세요.'));
+      throw new Error(await toErrorMessage(response, 'Failed to save the reference. Please try again.'));
     }
 
-    throw new Error(await toErrorMessage(response, '입력값을 다시 확인해 주세요.'));
+    throw new Error(await toErrorMessage(response, 'Check the form values and try again.'));
   }
 
   const reference = (await response.json()) as ReferenceResponse;

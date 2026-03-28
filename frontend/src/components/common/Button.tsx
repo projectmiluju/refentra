@@ -20,20 +20,20 @@ const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const baseStyle = 'inline-flex items-center justify-center font-pretendard transition-colors min-w-[80px] rounded-lg';
-  
+  const baseStyle = 'inline-flex min-h-[44px] min-w-[96px] items-center justify-center gap-2 rounded-md border font-pretendard font-medium text-nowrap transition-all duration-200';
+
   const sizeStyles = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
+    sm: 'px-3 py-2 text-sm',
+    md: 'px-4 py-2.5 text-sm',
+    lg: 'px-6 py-3 text-[15px]',
   };
 
   const variantStyles = {
-    primary: 'bg-primary text-sys-text hover:bg-blue-600 active:bg-blue-700',
-    ghost: 'bg-transparent text-text-muted hover:text-sys-text active:text-sys-text',
+    primary: 'border-primary bg-primary text-white shadow-soft hover:bg-accent hover:border-accent active:translate-y-px',
+    ghost: 'border-border/70 bg-surface text-sys-text hover:bg-surface-soft',
   };
 
-  const disabledStyles = 'disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed opacity-50 cursor-not-allowed';
+  const disabledStyles = 'cursor-not-allowed opacity-60';
 
   const combinedClassName = [
     baseStyle,
@@ -42,14 +42,16 @@ const Button: React.FC<ButtonProps> = ({
     fullWidth ? 'w-full' : '',
     disabled || isLoading ? disabledStyles : '',
     className,
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <button className={combinedClassName} disabled={disabled || isLoading} {...props}>
       {isLoading ? (
-        <span className="mr-2 animate-spin rounded-full h-4 w-4 border-2 border-sys-text border-t-transparent"></span>
+        <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
       ) : null}
-      <span className="text-body-ko text-nowrap">{children}</span>
+      {children}
     </button>
   );
 };

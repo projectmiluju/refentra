@@ -8,18 +8,19 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ isError = false, className = '', ...props }, ref) => {
-    
-    const baseStyle = 'w-full px-4 py-2 bg-surface text-sys-text font-pretendard rounded-lg border outline-none transition-colors';
-    const borderStyle = isError 
+    const baseStyle = 'w-full min-h-[48px] rounded-md border bg-surface px-4 py-3 font-pretendard text-sys-text outline-none transition-colors';
+    const borderStyle = isError
       ? 'border-error focus:border-error'
-      : 'border-slate-700 focus:border-primary';
+      : 'border-border/40 focus:border-primary';
 
     const combinedClassName = [
       baseStyle,
       borderStyle,
-      'placeholder-text-muted focus:ring-1 focus:ring-primary',
-      className
-    ].filter(Boolean).join(' ');
+      'placeholder:text-text-muted focus:ring-1 focus:ring-primary/20 disabled:bg-surface-soft disabled:text-text-muted',
+      className,
+    ]
+      .filter(Boolean)
+      .join(' ');
 
     return (
       <input

@@ -97,14 +97,17 @@ const Login: React.FC<LoginProps> = ({ sessionMessage, redirectTo, onLoginSucces
 
   return (
     <div className="w-full min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-[420px] bg-surface rounded-lg shadow-xl p-8 border border-slate-800">
-        <h1 className="text-3xl font-pretendard font-bold text-center text-sys-text mb-8">
-          {LOGIN_TEXT.brand}
-        </h1>
+      <div className="w-full max-w-[420px] rounded-2xl border border-border/70 bg-surface p-8 shadow-float">
+        <div className="mb-8">
+          <p className="ui-label">Access</p>
+          <h1 className="mt-3 font-pretendard text-4xl font-semibold tracking-[-0.03em] text-sys-text">
+            {LOGIN_TEXT.brand}
+          </h1>
+        </div>
         
         <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
           <div>
-            <label htmlFor={emailInputId} className="block text-sm font-medium text-text-muted text-body-ko mb-2">
+            <label htmlFor={emailInputId} className="ui-label mb-3 block">
               {LOGIN_TEXT.emailLabel}
             </label>
             <Input 
@@ -125,7 +128,7 @@ const Login: React.FC<LoginProps> = ({ sessionMessage, redirectTo, onLoginSucces
           </div>
           
           <div>
-            <label htmlFor={passwordInputId} className="block text-sm font-medium text-text-muted text-body-ko mb-2">
+            <label htmlFor={passwordInputId} className="ui-label mb-3 block">
               {LOGIN_TEXT.passwordLabel}
             </label>
             <Input 
@@ -156,8 +159,8 @@ const Login: React.FC<LoginProps> = ({ sessionMessage, redirectTo, onLoginSucces
           </Button>
         </form>
 
-        <div className="mt-6 flex justify-center">
-          <a href="#" className="inline-flex min-h-6 items-center text-sm text-text-muted text-body-ko hover:text-sys-text transition-colors">
+        <div className="mt-6 flex justify-start">
+          <a href="#" className="inline-flex min-h-6 items-center text-sm text-text-muted transition-colors hover:text-sys-text">
             {LOGIN_TEXT.forgotPassword}
           </a>
         </div>

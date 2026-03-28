@@ -2,11 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Landing from './pages/Landing';
 import { APP_TEXT } from './constants/uiText';
 import { fetchHealthStatus } from './lib/health';
 import {
   clearLoginRedirect,
-  getLoginRedirectSearch,
   resolveLoginRedirect,
   writeLoginRedirect,
 } from './lib/loginRedirect';
@@ -49,13 +49,7 @@ const RequireAuth: React.FC<{ authenticated: boolean; children: React.ReactEleme
 
     const redirectTo = `${location.pathname}${location.search}`;
     writeLoginRedirect(redirectTo);
-    navigate({
-      pathname: '/login',
-      search: getLoginRedirectSearch(redirectTo),
-    }, {
-      replace: false,
-      state: { redirectTo } satisfies LoginLocationState,
-    });
+    navigate('/', { replace: true });
   }, [authenticated, location.pathname, location.search, navigate]);
 
   if (!authenticated) {
@@ -102,13 +96,13 @@ const LoginRoute: React.FC<{
 
 const BootingScreen: React.FC = () => (
   <div className="min-h-screen bg-background text-sys-text flex items-center justify-center p-4">
-    <p className="text-body-ko text-slate-300">{APP_TEXT.booting}</p>
+    <p className="text-body-ko text-text-muted">{APP_TEXT.booting}</p>
   </div>
 );
 
 const AuthCheckingScreen: React.FC = () => (
   <div className="min-h-screen bg-background text-sys-text flex items-center justify-center p-4">
-    <p className="text-body-ko text-slate-300">{APP_TEXT.authChecking}</p>
+    <p className="text-body-ko text-text-muted">{APP_TEXT.authChecking}</p>
   </div>
 );
 
@@ -233,6 +227,10 @@ const AppShell: React.FC = () => {
       return <AuthCheckingScreen />;
     }
 
+    if (authStatus === 'unauthenticated') {
+      return <Navigate to="/" replace />;
+    }
+
     return (
       <RequireAuth authenticated={authStatus === 'authenticated'}>
         <Dashboard
@@ -259,7 +257,11 @@ const AppShell: React.FC = () => {
       return <AuthCheckingScreen />;
     }
 
-    return <Navigate to={authStatus === 'authenticated' ? '/dashboard' : '/login'} replace />;
+    if (authStatus === 'authenticated') {
+      return <Navigate to="/dashboard" replace />;
+    }
+
+    return <Landing />;
   };
 
   return (

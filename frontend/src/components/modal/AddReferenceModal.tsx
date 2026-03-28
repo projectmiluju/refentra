@@ -24,19 +24,21 @@ const AddReferenceModal: React.FC<AddReferenceModalProps> = ({ onClose, onSave }
   const descriptionInputId = 'reference-description';
   const tagsInputId = 'reference-tags';
 
-  const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && tagInput.trim() !== '') {
-      e.preventDefault();
-      const normalizedTag = tagInput.trim();
-      if (!tags.includes(normalizedTag)) {
-        setTags([...tags, normalizedTag]);
-      }
-      setTagInput('');
+  const handleAddTag = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter' || tagInput.trim() === '') {
+      return;
     }
+
+    event.preventDefault();
+    const normalizedTag = tagInput.trim();
+    if (!tags.includes(normalizedTag)) {
+      setTags([...tags, normalizedTag]);
+    }
+    setTagInput('');
   };
 
   const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(t => t !== tagToRemove));
+    setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -84,79 +86,98 @@ const AddReferenceModal: React.FC<AddReferenceModalProps> = ({ onClose, onSave }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 text-sys-text">
-      <div className="w-full max-w-[560px] bg-surface rounded-2xl shadow-2xl p-8 border border-slate-700">
-        <h2 className="text-2xl font-pretendard font-bold mb-6">{REFERENCE_MODAL_TEXT.title}</h2>
-        
-        <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
-          <div>
-            <label htmlFor={urlInputId} className="block text-sm font-medium text-text-muted mb-2">{REFERENCE_MODAL_TEXT.urlLabel}</label>
-            <Input
-              id={urlInputId}
-              type="url"
-              placeholder={REFERENCE_MODAL_TEXT.urlPlaceholder}
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              isError={errorMessage === REFERENCE_MODAL_TEXT.emptyUrl || errorMessage === REFERENCE_MODAL_TEXT.invalidUrl}
-              disabled={isSubmitting}
-              required
-            />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-accent/25 p-4 backdrop-blur-sm text-sys-text">
+      <div className="w-full max-w-[640px] rounded-2xl border border-border/80 bg-surface shadow-float">
+        <div className="border-b border-border/70 px-6 py-5">
+          <p className="ui-label">Capture</p>
+          <h2 className="mt-3 text-[28px] font-semibold tracking-[-0.03em]">{REFERENCE_MODAL_TEXT.title}</h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-text-muted">{REFERENCE_MODAL_TEXT.subtitle}</p>
+        </div>
+
+        <form className="flex flex-col gap-5 px-6 py-6" onSubmit={handleSubmit} noValidate>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label htmlFor={urlInputId} className="ui-label mb-3 block">
+                {REFERENCE_MODAL_TEXT.urlLabel}
+              </label>
+              <Input
+                id={urlInputId}
+                type="url"
+                placeholder={REFERENCE_MODAL_TEXT.urlPlaceholder}
+                value={url}
+                onChange={(event) => setUrl(event.target.value)}
+                isError={errorMessage === REFERENCE_MODAL_TEXT.emptyUrl || errorMessage === REFERENCE_MODAL_TEXT.invalidUrl}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor={titleInputId} className="ui-label mb-3 block">
+                {REFERENCE_MODAL_TEXT.titleLabel}
+              </label>
+              <Input
+                id={titleInputId}
+                type="text"
+                placeholder={REFERENCE_MODAL_TEXT.titlePlaceholder}
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                isError={errorMessage === REFERENCE_MODAL_TEXT.emptyTitle}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
           </div>
 
           <div>
-            <label htmlFor={titleInputId} className="block text-sm font-medium text-text-muted mb-2">{REFERENCE_MODAL_TEXT.titleLabel}</label>
-            <Input
-              id={titleInputId}
-              type="text"
-              placeholder={REFERENCE_MODAL_TEXT.titlePlaceholder}
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              isError={errorMessage === REFERENCE_MODAL_TEXT.emptyTitle}
-              disabled={isSubmitting}
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor={descriptionInputId} className="block text-sm font-medium text-text-muted mb-2">{REFERENCE_MODAL_TEXT.descriptionLabel}</label>
-            <textarea 
+            <label htmlFor={descriptionInputId} className="ui-label mb-3 block">
+              {REFERENCE_MODAL_TEXT.descriptionLabel}
+            </label>
+            <textarea
               id={descriptionInputId}
-              rows={4}
+              rows={5}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               placeholder={REFERENCE_MODAL_TEXT.descriptionPlaceholder}
               disabled={isSubmitting}
-              className="w-full px-4 py-3 bg-[#060E20] text-sys-text font-pretendard rounded-lg border border-slate-700 focus:border-primary placeholder-text-muted outline-none transition-colors resize-none"
-            ></textarea>
+              className="min-h-[148px] w-full resize-none rounded-md border border-border/70 bg-surface px-4 py-3 text-sys-text outline-none transition-colors placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary/20 disabled:bg-surface-soft disabled:text-text-muted"
+            />
+            <p className="mt-2 text-sm text-text-muted">{REFERENCE_MODAL_TEXT.helper}</p>
           </div>
 
           <div>
-            <label htmlFor={tagsInputId} className="block text-sm font-medium text-text-muted mb-2">{REFERENCE_MODAL_TEXT.tagsLabel}</label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {tags.map(tag => (
+            <label htmlFor={tagsInputId} className="ui-label mb-3 block">
+              {REFERENCE_MODAL_TEXT.tagsLabel}
+            </label>
+            <div className="mb-3 flex flex-wrap gap-2">
+              {tags.map((tag) => (
                 <TagBadge key={tag} label={tag} onRemove={() => removeTag(tag)} />
               ))}
             </div>
-            <Input 
+            <Input
               id={tagsInputId}
-              type="text" 
+              type="text"
               placeholder={REFERENCE_MODAL_TEXT.tagPlaceholder}
               value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
+              onChange={(event) => setTagInput(event.target.value)}
               onKeyDown={handleAddTag}
               disabled={isSubmitting}
             />
           </div>
 
           {errorMessage ? (
-            <p className="text-sm text-error text-body-ko" role="alert">
+            <p className="text-sm text-error" role="alert">
               {errorMessage}
             </p>
           ) : null}
 
-          <div className="flex justify-end gap-3 mt-4">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>{REFERENCE_MODAL_TEXT.cancel}</Button>
-            <Button type="submit" isLoading={isSubmitting}>{isSubmitting ? REFERENCE_MODAL_TEXT.submitting : REFERENCE_MODAL_TEXT.submit}</Button>
+          <div className="flex flex-wrap justify-end gap-3 border-t border-border/70 pt-5">
+            <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
+              {REFERENCE_MODAL_TEXT.cancel}
+            </Button>
+            <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting}>
+              {isSubmitting ? REFERENCE_MODAL_TEXT.submitting : REFERENCE_MODAL_TEXT.submit}
+            </Button>
           </div>
         </form>
       </div>

@@ -3,22 +3,43 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #1d4ed8;
+  --color-primary: #334155;
   --color-secondary: #64748b;
-  --color-background: #0f172a;
-  --color-surface: #1e293b;
-  --color-text: #f8fafc;
-  --color-text-muted: #94a3b8;
-  --color-error: #ef4444;
+  --color-accent: #0f172a;
+  --color-background: #f7f9fb;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f0f4f7;
+  --color-surface-muted: #e8eff3;
+  --color-text: #1f2937;
+  --color-text-muted: #667085;
+  --color-border: #d0d5dd;
+  --color-error: #b42318;
+  --color-success: #0f766e;
 }
 
 @layer base {
   html {
-    font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif;
+    font-family: 'Pretendard', 'Inter', 'Noto Sans KR', system-ui, sans-serif;
+    background: var(--color-background);
   }
 
   body {
     @apply bg-background text-sys-text font-pretendard m-0 p-0;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button,
+  input,
+  textarea {
+    font: inherit;
   }
 }
 
@@ -32,5 +53,17 @@
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
+  }
+
+  .surface-card {
+    @apply bg-surface border border-border/70 shadow-soft;
+  }
+
+  .surface-panel {
+    @apply bg-surface-soft border border-border/60;
+  }
+
+  .ui-label {
+    @apply font-jetbrains text-[11px] uppercase tracking-[0.2em] text-text-muted;
   }
 }
