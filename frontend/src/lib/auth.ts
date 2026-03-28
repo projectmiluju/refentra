@@ -14,6 +14,12 @@ interface LoginRequest {
   password: string;
 }
 
+interface SignupRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
 type RefreshResult =
   | { ok: true }
   | { ok: false; code?: string; message: string };
@@ -59,6 +65,23 @@ export const login = async (request: LoginRequest): Promise<AuthenticatedUser> =
   if (!response.ok) {
     const errorBody = await readErrorResponse(response);
     throw new Error(errorBody.error ?? 'Failed to sign in.');
+  }
+
+  return (await response.json()) as AuthenticatedUser;
+};
+
+export const signup = async (request: SignupRequest): Promise<AuthenticatedUser> => {
+  const response = await fetch(`${AUTH_API_PATH}/signup`, withCredentials({
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  }));
+
+  if (!response.ok) {
+    const errorBody = await readErrorResponse(response);
+    throw new Error(errorBody.error ?? 'Failed to create the account.');
   }
 
   return (await response.json()) as AuthenticatedUser;
