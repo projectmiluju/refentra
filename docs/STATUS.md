@@ -5,6 +5,9 @@
 **배포 URL:** 미정
 
 ## 최근 변경
+- `main`에는 fresh DB 기준 `users.email` unique 제약 마이그레이션 충돌 수정이 반영됐습니다.
+- 원인은 Docker init SQL의 `users_email_key`와 GORM `AutoMigrate`가 기대하는 unique 제약 이름이 달랐던 것이고, 현재는 앱 시작 시 legacy 제약 이름을 정리한 뒤 마이그레이션을 수행합니다.
+- 이 수정으로 GitHub Actions `Playwright Smoke E2E`의 health check 단계에서 fresh DB가 `503`으로 멈추던 문제가 해소됐습니다.
 - `main`에는 최소 회원가입 기반 실제 사용자 인증 전환이 반영됐습니다.
 - 백엔드에는 `users` 저장 구조, 이메일 unique 제약, `POST /api/v1/auth/signup`, 비밀번호 해시 검증이 추가됐습니다.
 - 프론트는 `/signup` 진입, `name/email/password` 가입 폼, 가입 성공 직후 자동 로그인, 제품 모드 빈 상태 대시보드 진입 흐름을 지원합니다.
@@ -20,7 +23,7 @@
 - GitHub 이슈 `#6`, `#7`은 기존 `main` 직행 커밋 기준으로 수동 정리됐고, `#5`, `#8`은 브랜치/PR 흐름으로 다시 닫았습니다.
 - `main`에는 same-repo PR 전용 `Playwright Smoke E2E` GitHub Actions job이 추가됐습니다.
 - PR에서는 full Playwright 대신 smoke 범위만 실행하고, full E2E는 `push` 경로에 남겨 PR 대기 시간을 줄였습니다.
-- smoke 범위는 보호 라우트 리다이렉트, 저장/재조회/로그아웃, 대시보드 URL 쿼리 복원 3개 시나리오로 고정됐습니다.
+- smoke 범위는 회원가입 후 자동 로그인, 보호 라우트 리다이렉트, 저장/재조회/로그아웃, 대시보드 URL 쿼리 복원 4개 시나리오로 고정됐습니다.
 - PostgreSQL/Redis readiness, 앱 health check, HTML report, test-results, 서버 로그 아티팩트 업로드 규칙이 워크플로에 반영됐습니다.
 - QA 과정에서 Playwright HTML report 환경변수 충돌로 산출물 경로가 어긋나는 문제가 드러났고, `REFENTRA_PLAYWRIGHT_*` 접두사로 수정됐습니다.
 - 깨끗한 GitHub Actions 체크아웃에서 `go test ./...`가 `frontend/dist` 부재로 실패하던 문제를 `frontend/dist/.gitkeep` 추적으로 해결했습니다.
@@ -55,6 +58,7 @@
 | rate limiting이 메모리 스토어 기반이라 다중 인스턴스 환경에서는 공유되지 않음 | 중간 | 유지 |
 | CSP는 현재 앱 구조 기준의 보수적 기본값이라 외부 리소스 추가 시 재조정 필요 | 낮음 | 유지 |
 | `.env.example`, `docker-compose.prod.yml`에 `AUTH_MOCK_*` 레거시 환경변수가 남아 있음 | 낮음 | 정리 필요 |
+| Docker init SQL과 GORM `AutoMigrate`를 병행하는 구조라 future schema 변경 시 fresh volume 재검증이 필수임 | 낮음 | 운영 주의 |
 
 ## 기술 부채
 | 항목 | 등록일 | 예상 작업량 |
@@ -68,6 +72,7 @@
 | 검색/태그 필터/페이지네이션 전체 회귀를 nightly 또는 후속 full E2E로 확장 | 2026-03-27 | 반나절 |
 | 레거시 `AUTH_MOCK_*` 환경변수와 운영 compose 예시를 실제 사용자 인증 기준으로 정리 | 2026-03-29 | 반나절 |
 | 비밀번호 재설정, 계정 삭제 같은 계정 관리 기능이 아직 없음 | 2026-03-29 | 1일~2일 |
+| Docker init SQL과 앱 마이그레이션의 역할 분리를 명시한 정식 migration 체계 도입 | 2026-03-29 | 1일 |
 
 ## 다음 계획
 - [ ] 포트폴리오 모드 샘플 데이터 레이어를 장기적으로 유지할지, 별도 프레젠테이션 계층으로 분리할지 결정

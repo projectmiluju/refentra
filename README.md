@@ -86,6 +86,7 @@ go run .
 - Go 서버는 `frontend/dist`를 `go:embed`로 서빙하므로, 정적 파일 포함 상태를 확인하려면 먼저 `frontend`에서 `npm run build`가 필요합니다.
 - DB 또는 Redis가 준비되지 않으면 앱은 정상 화면 대신 설정 안내 페이지를 보여줍니다.
 - 프론트엔드 개발 서버(`npm run dev`)는 `/api` 요청을 `http://127.0.0.1:8080`으로 프록시합니다.
+- 서버 부팅 시 `users.email`의 legacy unique 제약 이름(`users_email_key`)은 정리한 뒤 GORM `AutoMigrate`가 현재 스키마를 맞춥니다. fresh DB와 기존 volume 모두 이 경로를 기준으로 동작합니다.
 
 ### 데모 데이터
 - PostgreSQL 컨테이너 첫 생성 시 기본 사용자 `user-1234`와 데모 레퍼런스 3개가 1회만 주입됩니다.
@@ -118,6 +119,8 @@ go run .
 docker compose down -v
 docker compose up -d postgres redis
 ```
+
+재초기화 직후에는 앱이 fresh DB 스키마를 다시 맞추므로, 회원가입/로그인 smoke를 재검증할 때는 `go run .` 후 `/api/v1/health`가 `200`인지 먼저 확인하는 편이 안전합니다.
 
 ## 프로젝트 구조
 ```text
