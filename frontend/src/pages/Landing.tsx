@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import Button from '../components/common/Button';
 import TagBadge from '../components/common/TagBadge';
 import { LANDING_TEXT } from '../constants/uiText';
+import { getLoginRedirectSearch } from '../lib/loginRedirect';
 
 const PREVIEW_TAGS = ['Research', 'UI', 'Archive'];
 const PREVIEW_ROWS = [
@@ -30,6 +31,8 @@ const TRUST_METRICS = [
   { value: '12m', label: 'average retrieval window' },
 ];
 
+const DEMO_LOGIN_PATH = `/login${getLoginRedirectSearch('/dashboard?mode=portfolio')}`;
+
 const Landing: React.FC = () => (
   <div className="min-h-screen bg-background text-sys-text">
     <header className="border-b border-border/60 bg-background">
@@ -42,7 +45,7 @@ const Landing: React.FC = () => (
           <a href="#preview">
             <Button variant="ghost">Preview</Button>
           </a>
-          <Link to="/login">
+          <Link to={DEMO_LOGIN_PATH}>
             <Button>{LANDING_TEXT.primaryAction}</Button>
           </Link>
         </div>
@@ -61,7 +64,7 @@ const Landing: React.FC = () => (
               {LANDING_TEXT.description}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/login">
+              <Link to={DEMO_LOGIN_PATH}>
                 <Button size="lg">{LANDING_TEXT.primaryAction}</Button>
               </Link>
               <a href="#preview">
@@ -234,7 +237,7 @@ const Landing: React.FC = () => (
             <p className="mt-4 text-base leading-8 text-slate-300">{LANDING_TEXT.ctaDescription}</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link to="/dashboard">
+            <Link to={DEMO_LOGIN_PATH}>
               <Button className="!border-white !bg-white !text-accent hover:!border-slate-100 hover:!bg-slate-100">
                 {LANDING_TEXT.finalPrimaryAction}
               </Button>

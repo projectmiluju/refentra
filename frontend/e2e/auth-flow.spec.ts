@@ -7,7 +7,6 @@ test.describe('브라우저 핵심 인증 흐름', () => {
 
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole('heading', { name: 'A reference system built for recall.' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Sign in' }).first()).toBeVisible();
   });
 
   test('로그인 후 온보딩 빈 상태를 렌더링한다', async ({ page }) => {

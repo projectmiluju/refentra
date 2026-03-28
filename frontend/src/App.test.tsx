@@ -17,6 +17,7 @@ describe('App', () => {
 
   beforeEach(() => {
     window.history.pushState({}, '', '/login');
+    window.sessionStorage.clear();
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
   });
@@ -102,7 +103,7 @@ describe('App', () => {
     render(<App />);
 
     expect(await screen.findByRole('heading', { name: 'A reference system built for recall.' })).toBeInTheDocument();
-    await user.click(screen.getAllByRole('link', { name: 'Sign in' })[0]);
+    await user.click(screen.getByRole('link', { name: 'Go to sign in' }));
     await user.type(await screen.findByLabelText('Email address'), 'dev@refentra.com');
     await user.type(screen.getByLabelText('Password'), 'password123');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));

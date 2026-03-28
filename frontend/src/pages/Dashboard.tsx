@@ -6,9 +6,15 @@ import Input from '../components/common/Input';
 import TagBadge from '../components/common/TagBadge';
 import AddReferenceModal from '../components/modal/AddReferenceModal';
 import { DASHBOARD_TEXT } from '../constants/uiText';
-import type { ReferenceDraft, ReferenceItem, ReferenceListQuery } from '../types/reference';
+import type { DashboardMode, ReferenceDraft, ReferenceItem, ReferenceListQuery } from '../types/reference';
 import { createReference, fetchReferences } from '../lib/references';
-import { getDashboardLocation, parseDashboardSearchParams } from '../lib/dashboardQuery';
+import {
+  DEFAULT_DASHBOARD_MODE,
+  PORTFOLIO_DASHBOARD_MODE,
+  getDashboardLocation,
+  parseDashboardSearchParams,
+} from '../lib/dashboardQuery';
+import { createPortfolioReference, queryPortfolioReferences } from '../lib/portfolioReferences';
 
 interface DashboardProps {
   onLoggedOut: () => Promise<void>;
@@ -30,21 +36,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
   const [lastValidPage, setLastValidPage] = useState<number | null>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-  const { search: searchQuery, tags: selectedTags, page: currentPage, invalidPage } = parseDashboardSearchParams(
+  const { search: searchQuery, tags: selectedTags, page: currentPage, invalidPage, mode } = parseDashboardSearchParams(
     new URLSearchParams(location.search),
   );
   const [searchInput, setSearchInput] = useState(searchQuery);
+  const isPortfolioMode = mode === PORTFOLIO_DASHBOARD_MODE;
 
   const hasActiveFilters = searchQuery.trim().length > 0 || selectedTags.length > 0;
 
   const updateDashboardQuery = (
-    overrides: Partial<ReferenceListQuery> = {},
+    overrides: Partial<ReferenceListQuery> & { mode?: DashboardMode } = {},
     options: { replace?: boolean } = {},
   ): void => {
     const nextLocation = getDashboardLocation({
       search: overrides.search ?? searchQuery,
       tags: overrides.tags ?? selectedTags,
       page: overrides.page ?? currentPage,
+      mode: overrides.mode ?? mode,
     });
     const currentLocation = `${location.pathname}${location.search}`;
 
@@ -69,7 +77,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
     try {
       setIsLoading(true);
       setLoadError('');
-      const response = await fetchReferences(nextQuery);
+      const response = isPortfolioMode
+        ? queryPortfolioReferences(nextQuery)
+        : await fetchReferences(nextQuery);
 
       const shouldCorrectPage = (response.totalPages === 0 && requestedPage > 1)
         || (response.totalPages > 0 && requestedPage > response.totalPages);
@@ -109,7 +119,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
 
     setPageNotice(DASHBOARD_TEXT.invalidPageFallback);
     updateDashboardQuery({ page: lastValidPage ?? 1 }, { replace: true });
-  }, [invalidPage, lastValidPage, searchQuery, selectedTags, navigate, location.pathname, location.search]);
+  }, [invalidPage, lastValidPage, mode, searchQuery, selectedTags, navigate, location.pathname, location.search]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -126,7 +136,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [searchInput, searchQuery, selectedTags, currentPage, navigate, location.pathname, location.search]);
+  }, [searchInput, searchQuery, selectedTags, currentPage, mode, navigate, location.pathname, location.search]);
 
   useEffect(() => {
     if (invalidPage) {
@@ -134,10 +144,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
     }
 
     void loadReferences();
-  }, [searchQuery, currentPage, selectedTags.join('|'), invalidPage]);
+  }, [searchQuery, currentPage, selectedTags.join('|'), invalidPage, mode]);
 
   const handleCreateReference = async (draft: ReferenceDraft): Promise<void> => {
-    await createReference(draft);
+    if (isPortfolioMode) {
+      createPortfolioReference(draft);
+    } else {
+      await createReference(draft);
+    }
     setIsModalOpen(false);
     setPageNotice('');
 
@@ -176,6 +190,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
     setPageNotice('');
     setSearchInput('');
     updateDashboardQuery({ search: '', tags: [], page: 1 });
+  };
+
+  const handleSwitchMode = (nextMode: DashboardMode): void => {
+    setPageNotice('');
+    setSearchInput('');
+    updateDashboardQuery({ search: '', tags: [], page: 1, mode: nextMode });
   };
 
   const renderContent = (): React.ReactNode => {
@@ -303,7 +323,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
             <div className="max-w-2xl">
               <p className="ui-label">{DASHBOARD_TEXT.brandMeta}</p>
               <h1 className="mt-4 text-3xl font-semibold tracking-[-0.03em]">{DASHBOARD_TEXT.title}</h1>
-              <p className="mt-4 text-base leading-8 text-text-muted">{DASHBOARD_TEXT.subtitle}</p>
+              <p className="mt-4 text-base leading-8 text-text-muted">
+                {isPortfolioMode ? DASHBOARD_TEXT.portfolioSubtitle : DASHBOARD_TEXT.subtitle}
+              </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Button variant="ghost" onClick={() => { void handleLogout(); }} isLoading={isLoggingOut}>
@@ -314,6 +336,28 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
                 {DASHBOARD_TEXT.addReference}
               </Button>
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="ui-label mr-1">{DASHBOARD_TEXT.modeLabel}</p>
+            <button
+              type="button"
+              onClick={() => handleSwitchMode(PORTFOLIO_DASHBOARD_MODE)}
+              className={isPortfolioMode
+                ? 'min-h-[40px] rounded-md border border-primary bg-primary px-3 text-sm text-white'
+                : 'min-h-[40px] rounded-md border border-border/70 bg-surface px-3 text-sm text-sys-text hover:bg-surface-soft'}
+            >
+              {DASHBOARD_TEXT.portfolioMode}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchMode(DEFAULT_DASHBOARD_MODE)}
+              className={!isPortfolioMode
+                ? 'min-h-[40px] rounded-md border border-primary bg-primary px-3 text-sm text-white'
+                : 'min-h-[40px] rounded-md border border-border/70 bg-surface px-3 text-sm text-sys-text hover:bg-surface-soft'}
+            >
+              {DASHBOARD_TEXT.productMode}
+            </button>
           </div>
 
           <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-surface px-4 py-3">
