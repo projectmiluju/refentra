@@ -22,7 +22,7 @@ describe('App', () => {
     vi.stubGlobal('fetch', fetchMock);
   });
 
-  it('유효한 이메일과 비밀번호로 로그인하면 대시보드로 이동해야 한다', async () => {
+  it('navigates to the dashboard after a successful sign in', async () => {
     const user = userEvent.setup();
     fetchMock
       .mockResolvedValueOnce({
@@ -41,7 +41,7 @@ describe('App', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: 'user-1234', name: '김개발', email: 'dev@refentra.com' }),
+        json: async () => ({ id: 'user-1234', name: 'Kim Dev', email: 'dev@refentra.com' }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -57,7 +57,7 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Reference Library' })).toBeInTheDocument();
   });
 
-  it('쿼리가 포함된 보호 URL 접근 후 로그인하면 같은 대시보드 상태로 복귀해야 한다', async () => {
+  it('restores the protected dashboard query after sign in', async () => {
     const user = userEvent.setup();
     window.history.pushState({}, '', '/dashboard?search=react&tags=Go&page=2');
 
@@ -78,16 +78,16 @@ describe('App', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: 'user-1234', name: '김개발', email: 'dev@refentra.com' }),
+        json: async () => ({ id: 'user-1234', name: 'Kim Dev', email: 'dev@refentra.com' }),
       })
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           items: [{
             id: 'ref-2',
-            title: 'React 문서',
+            title: 'React docs',
             url: 'https://example.com/react',
-            description: '설명',
+            description: 'Description',
             tags: ['Go'],
             uploader_id: 'user-1234',
             created_at: '2026-03-26T00:00:00Z',
@@ -108,7 +108,7 @@ describe('App', () => {
     await user.type(screen.getByLabelText('Password'), 'password123');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    expect(await screen.findByRole('heading', { name: 'React 문서' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'React docs' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/dashboard');
     expect(window.location.search).toBe('?search=react&tags=Go&page=2');
     expect(fetchMock.mock.calls[4]?.[0]).toContain('search=react');
@@ -116,7 +116,7 @@ describe('App', () => {
     expect(fetchMock.mock.calls[4]?.[0]).toContain('page=2');
   });
 
-  it('잘못된 이메일로 로그인하면 에러 메시지를 보여주고 이동하지 않아야 한다', async () => {
+  it('shows an inline error for an invalid email before sign in', async () => {
     const user = userEvent.setup();
     fetchMock.mockResolvedValueOnce({
       ok: true,
@@ -141,7 +141,84 @@ describe('App', () => {
     expect(screen.queryByRole('heading', { name: 'Reference Library' })).not.toBeInTheDocument();
   });
 
-  it('DB가 준비되지 않았으면 설정 안내 페이지를 보여줘야 한다', async () => {
+  it('creates an account and lands in the empty dashboard state', async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, '', '/signup');
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'ready', message: 'ok' }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Authentication required' }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ code: 'AUTH_REQUIRED', error: 'Authentication required' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'user-5678', name: 'Alex Kim', email: 'alex@refentra.com' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => createListResponse([]),
+      });
+
+    render(<App />);
+
+    await user.type(await screen.findByLabelText('Name'), 'Alex Kim');
+    await user.type(screen.getByLabelText('Email address'), 'alex@refentra.com');
+    await user.type(screen.getByLabelText('Password'), 'password123');
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByRole('heading', { name: 'No references yet.' })).toBeInTheDocument();
+    expect(fetchMock.mock.calls[3]?.[0]).toContain('/api/v1/auth/signup');
+  });
+
+  it('validates signup fields before sending the request', async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, '', '/signup');
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'ready', message: 'ok' }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Authentication required' }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ code: 'AUTH_REQUIRED', error: 'Authentication required' }),
+      });
+
+    render(<App />);
+
+    await user.type(await screen.findByLabelText('Name'), 'Alex Kim');
+    await user.type(screen.getByLabelText('Email address'), 'invalid-email');
+    await user.type(screen.getByLabelText('Password'), 'short');
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a valid email address.');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    await user.clear(screen.getByLabelText('Email address'));
+    await user.type(screen.getByLabelText('Email address'), 'alex@refentra.com');
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Use at least 8 characters.');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('shows the setup guide when the database is unavailable', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: false,
       json: async () => ({
