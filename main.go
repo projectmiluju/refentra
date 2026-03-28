@@ -95,6 +95,9 @@ func main() {
 		} else if pingErr := sqlDB.Ping(); pingErr != nil {
 			log.Printf("DB ping failed: %v. Running without DB for now.", pingErr)
 			db = nil
+		} else if normalizeErr := normalizeLegacyUserEmailConstraint(db); normalizeErr != nil {
+			log.Printf("DB migration preflight failed: %v. Running without DB for now.", normalizeErr)
+			db = nil
 		} else if migrateErr := db.AutoMigrate(&models.User{}, &models.Reference{}); migrateErr != nil {
 			log.Printf("DB migration failed: %v. Running without DB for now.", migrateErr)
 			db = nil
@@ -157,4 +160,20 @@ func main() {
 	if err := srv.Start(":8080"); err != nil {
 		log.Fatal("Server start failed: ", err)
 	}
+}
+
+func normalizeLegacyUserEmailConstraint(db *gorm.DB) error {
+	if db == nil || !db.Migrator().HasTable(&models.User{}) {
+		return nil
+	}
+
+	if err := db.Exec(`ALTER TABLE "users" DROP CONSTRAINT IF EXISTS "users_email_key"`).Error; err != nil {
+		return err
+	}
+
+	if err := db.Exec(`DROP INDEX IF EXISTS "users_email_key"`).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
