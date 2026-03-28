@@ -52,6 +52,7 @@ describe('Dashboard', () => {
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
     vi.useRealTimers();
+    window.sessionStorage.clear();
   });
 
   it('대시보드 진입 시 서버에서 레퍼런스를 조회해 렌더링해야 한다', async () => {
@@ -523,5 +524,38 @@ describe('Dashboard', () => {
     expect(await screen.findByText('첫 페이지 문서')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('The requested page was not available, so the list returned to the previous page.');
     expect(screen.getByTestId('location-display')).toHaveTextContent('/dashboard');
+  });
+
+  it('포트폴리오 모드에서는 샘플 데이터와 페이지네이션을 API 없이 렌더링해야 한다', async () => {
+    renderDashboard('/dashboard?mode=portfolio&page=2');
+
+    expect(await screen.findByText('Interaction references for tokenized button systems')).toBeInTheDocument();
+    expect(screen.getByText('12 references')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '2' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByTestId('location-display')).toHaveTextContent('/dashboard?mode=portfolio&page=2');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('포트폴리오 모드 저장은 샘플 목록에 반영되고 중복을 막아야 한다', async () => {
+    const user = userEvent.setup();
+
+    renderDashboard('/dashboard?mode=portfolio');
+
+    await screen.findByText('Search systems for high-density product teams');
+    await user.click(screen.getByRole('button', { name: 'Add reference' }));
+    await user.type(screen.getByLabelText('URL'), 'https://example.com/demo-reference');
+    await user.type(screen.getByLabelText('Title'), 'Demo capture reference');
+    await user.type(screen.getByLabelText('Notes'), 'Saved in portfolio mode');
+    await user.click(screen.getByRole('button', { name: 'Save reference' }));
+
+    expect(await screen.findByText('Demo capture reference')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Add reference' }));
+    await user.type(screen.getByLabelText('URL'), 'https://example.com/demo-reference');
+    await user.type(screen.getByLabelText('Title'), 'Demo capture reference');
+    await user.click(screen.getByRole('button', { name: 'Save reference' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('This reference already exists in the demo library.');
   });
 });
