@@ -1,8 +1,10 @@
-CREATE TABLE IF NOT EXISTS mock_users (
+CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS references (
@@ -20,8 +22,8 @@ CREATE TABLE IF NOT EXISTS references (
 CREATE INDEX IF NOT EXISTS idx_references_deleted_at ON references (deleted_at);
 CREATE INDEX IF NOT EXISTS idx_references_created_at ON references (created_at DESC);
 
-INSERT INTO mock_users (id, name, email)
-VALUES ('user-1234', '김개발', 'dev@refentra.com')
+INSERT INTO users (id, name, email, password_hash, created_at, updated_at)
+VALUES ('user-1234', '김개발', 'dev@refentra.com', '$2a$10$814yjHH.A9St877UVlRI6.3ETLS1/mgmCwno3UUNRA6uhH8syiJSW', NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO references (id, url, title, description, tags, uploader_id, created_at, updated_at)

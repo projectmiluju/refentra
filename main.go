@@ -95,7 +95,7 @@ func main() {
 		} else if pingErr := sqlDB.Ping(); pingErr != nil {
 			log.Printf("DB ping failed: %v. Running without DB for now.", pingErr)
 			db = nil
-		} else if migrateErr := db.AutoMigrate(&models.Reference{}); migrateErr != nil {
+		} else if migrateErr := db.AutoMigrate(&models.User{}, &models.Reference{}); migrateErr != nil {
 			log.Printf("DB migration failed: %v. Running without DB for now.", migrateErr)
 			db = nil
 		} else {
@@ -123,8 +123,8 @@ func main() {
 
 	// 3. Initialize Server
 	var authService *authsession.Service
-	if redisClient != nil {
-		authService = authsession.NewService(authsession.NewRedisSessionStore(redisClient), authsession.Config{
+	if redisClient != nil && db != nil {
+		authService = authsession.NewService(authsession.NewRedisSessionStore(redisClient), authsession.NewGormUserStore(db), authsession.Config{
 			JWTSecret:         envOrDefault("AUTH_JWT_SECRET", "refentra-dev-secret"),
 			AccessTTL:         time.Duration(envIntOrDefault("AUTH_ACCESS_TTL_MINUTES", 15)) * time.Minute,
 			RefreshTTL:        time.Duration(envIntOrDefault("AUTH_REFRESH_TTL_HOURS", 24)) * time.Hour,
@@ -132,8 +132,6 @@ func main() {
 			RefreshCookieName: envOrDefault("AUTH_REFRESH_COOKIE_NAME", "refentra_refresh_token"),
 			CookieSecure:      envBoolOrDefault("AUTH_COOKIE_SECURE", false),
 			CookieSameSite:    http.SameSiteLaxMode,
-			MockEmail:         envOrDefault("AUTH_MOCK_EMAIL", "dev@refentra.com"),
-			MockPassword:      envOrDefault("AUTH_MOCK_PASSWORD", "password123"),
 		})
 	}
 
