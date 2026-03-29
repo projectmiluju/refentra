@@ -36,10 +36,15 @@ npm install
 - db: `0`
 
 인증 기본값:
-- mock 로그인 이메일: `dev@refentra.com`
-- mock 로그인 비밀번호: `password123`
+- 기본 시드 계정 이메일: `dev@refentra.com`
+- 기본 시드 계정 비밀번호: `password123`
+- 회원가입 필드: `name`, `email`, `password`
+- 비밀번호 정책: `8자 이상`
 - Access Token: `httpOnly` 쿠키, 기본 `15분`
 - Refresh Token: Redis 저장, 기본 `24시간`
+
+레거시 항목:
+- `.env.example`의 `AUTH_MOCK_EMAIL`, `AUTH_MOCK_PASSWORD`는 현재 코드에서는 사용되지 않는 과거 설정값입니다.
 
 보안 기본값:
 - 개발 환경 CORS 허용 오리진: `localhost/127.0.0.1`의 `4173`, `5173`, `8080`
@@ -81,11 +86,14 @@ go run .
 - Go 서버는 `frontend/dist`를 `go:embed`로 서빙하므로, 정적 파일 포함 상태를 확인하려면 먼저 `frontend`에서 `npm run build`가 필요합니다.
 - DB 또는 Redis가 준비되지 않으면 앱은 정상 화면 대신 설정 안내 페이지를 보여줍니다.
 - 프론트엔드 개발 서버(`npm run dev`)는 `/api` 요청을 `http://127.0.0.1:8080`으로 프록시합니다.
+- 서버 부팅 시 `users.email`의 legacy unique 제약 이름(`users_email_key`)은 정리한 뒤 GORM `AutoMigrate`가 현재 스키마를 맞춥니다. fresh DB와 기존 volume 모두 이 경로를 기준으로 동작합니다.
 
 ### 데모 데이터
-- PostgreSQL 컨테이너 첫 생성 시 mock 사용자 `user-1234`와 데모 레퍼런스 3개가 1회만 주입됩니다.
+- PostgreSQL 컨테이너 첫 생성 시 기본 사용자 `user-1234`와 데모 레퍼런스 3개가 1회만 주입됩니다.
 - 컨테이너를 껐다 켜도 기존 volume이 유지되면 데이터는 다시 주입되지 않습니다.
-- 현재 로그인은 mock 사용자 1명을 기준으로 하지만, 세션 자체는 서버가 발급하고 검증합니다.
+- 로그인과 회원가입은 실제 `users` 테이블 기반으로 동작하며, 세션은 서버가 발급하고 검증합니다.
+- `/signup`에서는 `name`, `email`, `password`로 최소 회원가입이 가능하고, 성공 직후 자동 로그인됩니다.
+- 새로 가입한 사용자가 레퍼런스를 아직 저장하지 않았다면 제품 모드 대시보드에서 빈 상태 온보딩을 봅니다.
 - 로그인 성공 시 Access Token은 `httpOnly` 쿠키로 내려가고, Refresh Token은 Redis에 저장됩니다.
 - 로그아웃 시 Redis Refresh Token과 브라우저 쿠키가 함께 폐기됩니다.
 - 대시보드에서는 제목/설명/URL 기준 검색, 태그 필터, 번호 기반 페이지네이션이 실제 서버 조회로 동작합니다.
@@ -99,6 +107,7 @@ go run .
   - 기본 `/dashboard`는 기존 제품 모드이며, 서버 API 기준 조회/저장 계약을 유지합니다.
 - `POST /api/v1/references`는 동일 사용자 기준 `url + title` 조합 중복 저장을 서버에서 거절합니다.
 - Playwright는 위 URL 복원 흐름을 실제 브라우저에서 검증합니다.
+  - 회원가입 후 자동 로그인과 빈 상태 대시보드 진입
   - 쿼리 포함 `/dashboard` 직접 진입
   - 로그인 후 같은 검색/태그/페이지 상태 복귀
   - 새로고침 후 유지
@@ -110,6 +119,8 @@ go run .
 docker compose down -v
 docker compose up -d postgres redis
 ```
+
+재초기화 직후에는 앱이 fresh DB 스키마를 다시 맞추므로, 회원가입/로그인 smoke를 재검증할 때는 `go run .` 후 `/api/v1/health`가 `200`인지 먼저 확인하는 편이 안전합니다.
 
 ## 프로젝트 구조
 ```text
@@ -182,7 +193,8 @@ Docker 기준:
 - same-repo PR은 GitHub Actions의 `Playwright Smoke E2E` job이 자동 실행됩니다.
 - 외부 fork PR은 기본 자동 실행 대상이 아닙니다. 필요하면 저장소 관리자가 `workflow_dispatch`로 수동 실행해야 합니다.
 - 같은 PR에 새 push가 들어오면 이전 CI 실행은 취소되고 최신 SHA만 계속 진행됩니다.
-- smoke 범위는 아래 3개 시나리오입니다.
+- smoke 범위는 아래 4개 시나리오입니다.
+  - 회원가입 후 자동 로그인과 빈 상태 대시보드 진입
   - 보호된 대시보드 접근 시 로그인 리다이렉트
   - 로그인 후 저장, 새로고침 재조회, 로그아웃, 재접근 차단
   - 로그인 후 대시보드 URL 쿼리 상태 복원

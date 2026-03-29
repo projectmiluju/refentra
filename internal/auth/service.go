@@ -9,21 +9,24 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
 	ContextUserIDKey    = "auth_user_id"
 	ContextUserEmailKey = "auth_user_email"
 	ContextUserNameKey  = "auth_user_name"
+	MinimumPasswordLen  = 8
 )
 
 var (
 	ErrAuthenticationRequired = errors.New("authentication required")
 	ErrInvalidCredentials     = errors.New("invalid credentials")
 	ErrSessionExpired         = errors.New("session expired")
+	ErrDuplicateEmail         = errors.New("duplicate email")
 )
 
-type MockUser struct {
+type User struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Email string `json:"email"`
@@ -37,8 +40,6 @@ type Config struct {
 	RefreshCookieName string
 	CookieSecure      bool
 	CookieSameSite    http.SameSite
-	MockEmail         string
-	MockPassword      string
 }
 
 type AccessTokenClaims struct {
@@ -52,31 +53,41 @@ type TokenPair struct {
 	RefreshToken string
 }
 
+type UserStore interface {
+	CreateUser(ctx context.Context, input CreateUserInput) (User, error)
+	FindUserByEmail(ctx context.Context, email string) (StoredUser, error)
+}
+
+type CreateUserInput struct {
+	Name         string
+	Email        string
+	PasswordHash string
+}
+
+type StoredUser struct {
+	User
+	PasswordHash string
+}
+
 type Service struct {
 	sessionStore  SessionStore
+	userStore     UserStore
 	jwtSecret     []byte
 	accessTTL     time.Duration
 	refreshTTL    time.Duration
-	mockUser      MockUser
-	mockPassword  string
 	cookieSecure  bool
 	sameSite      http.SameSite
 	accessCookie  string
 	refreshCookie string
 }
 
-func NewService(sessionStore SessionStore, config Config) *Service {
+func NewService(sessionStore SessionStore, userStore UserStore, config Config) *Service {
 	return &Service{
-		sessionStore: sessionStore,
-		jwtSecret:    []byte(config.JWTSecret),
-		accessTTL:    config.AccessTTL,
-		refreshTTL:   config.RefreshTTL,
-		mockUser: MockUser{
-			ID:    "user-1234",
-			Name:  "김개발",
-			Email: config.MockEmail,
-		},
-		mockPassword:  config.MockPassword,
+		sessionStore:  sessionStore,
+		userStore:     userStore,
+		jwtSecret:     []byte(config.JWTSecret),
+		accessTTL:     config.AccessTTL,
+		refreshTTL:    config.RefreshTTL,
 		cookieSecure:  config.CookieSecure,
 		sameSite:      config.CookieSameSite,
 		accessCookie:  config.AccessCookieName,
@@ -84,38 +95,69 @@ func NewService(sessionStore SessionStore, config Config) *Service {
 	}
 }
 
-func (s *Service) Login(ctx context.Context, email string, password string, userAgent string) (MockUser, TokenPair, error) {
-	if email != s.mockUser.Email || password != s.mockPassword {
-		return MockUser{}, TokenPair{}, ErrInvalidCredentials
+func (s *Service) Signup(ctx context.Context, name string, email string, password string, userAgent string) (User, TokenPair, error) {
+	passwordHash, err := HashPassword(password)
+	if err != nil {
+		return User{}, TokenPair{}, err
 	}
 
-	return s.issueSession(ctx, s.mockUser, "", userAgent)
+	user, err := s.userStore.CreateUser(ctx, CreateUserInput{
+		Name:         name,
+		Email:        email,
+		PasswordHash: passwordHash,
+	})
+	if err != nil {
+		if errors.Is(err, ErrUserAlreadyExists) {
+			return User{}, TokenPair{}, ErrDuplicateEmail
+		}
+
+		return User{}, TokenPair{}, err
+	}
+
+	return s.issueSession(ctx, user, "", userAgent)
 }
 
-func (s *Service) Refresh(ctx context.Context, refreshToken string, userAgent string) (MockUser, TokenPair, error) {
+func (s *Service) Login(ctx context.Context, email string, password string, userAgent string) (User, TokenPair, error) {
+	storedUser, err := s.userStore.FindUserByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, ErrUserNotFound) {
+			return User{}, TokenPair{}, ErrInvalidCredentials
+		}
+
+		return User{}, TokenPair{}, err
+	}
+
+	if err := ComparePassword(storedUser.PasswordHash, password); err != nil {
+		return User{}, TokenPair{}, ErrInvalidCredentials
+	}
+
+	return s.issueSession(ctx, storedUser.User, "", userAgent)
+}
+
+func (s *Service) Refresh(ctx context.Context, refreshToken string, userAgent string) (User, TokenPair, error) {
 	if refreshToken == "" {
-		return MockUser{}, TokenPair{}, ErrAuthenticationRequired
+		return User{}, TokenPair{}, ErrAuthenticationRequired
 	}
 
 	session, err := s.sessionStore.LoadRefreshSession(ctx, refreshToken)
 	if err != nil {
 		if errors.Is(err, ErrRefreshSessionNotFound) {
-			return MockUser{}, TokenPair{}, ErrSessionExpired
+			return User{}, TokenPair{}, ErrSessionExpired
 		}
 
-		return MockUser{}, TokenPair{}, err
+		return User{}, TokenPair{}, err
 	}
 
 	if session.ExpiresAt.Before(time.Now()) {
 		_ = s.sessionStore.DeleteRefreshSession(ctx, refreshToken)
-		return MockUser{}, TokenPair{}, ErrSessionExpired
+		return User{}, TokenPair{}, ErrSessionExpired
 	}
 
 	if err := s.sessionStore.DeleteRefreshSession(ctx, refreshToken); err != nil {
-		return MockUser{}, TokenPair{}, err
+		return User{}, TokenPair{}, err
 	}
 
-	user := MockUser{
+	user := User{
 		ID:    session.UserID,
 		Name:  session.Name,
 		Email: session.Email,
@@ -132,9 +174,9 @@ func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 	return s.sessionStore.DeleteRefreshSession(ctx, refreshToken)
 }
 
-func (s *Service) Authenticate(accessToken string) (MockUser, error) {
+func (s *Service) Authenticate(accessToken string) (User, error) {
 	if accessToken == "" {
-		return MockUser{}, ErrAuthenticationRequired
+		return User{}, ErrAuthenticationRequired
 	}
 
 	claims := &AccessTokenClaims{}
@@ -142,10 +184,10 @@ func (s *Service) Authenticate(accessToken string) (MockUser, error) {
 		return s.jwtSecret, nil
 	})
 	if err != nil || !parsed.Valid {
-		return MockUser{}, ErrAuthenticationRequired
+		return User{}, ErrAuthenticationRequired
 	}
 
-	return MockUser{
+	return User{
 		ID:    claims.Subject,
 		Name:  claims.Name,
 		Email: claims.Email,
@@ -204,15 +246,15 @@ func (s *Service) RefreshCookieName() string {
 	return s.refreshCookie
 }
 
-func (s *Service) issueSession(ctx context.Context, user MockUser, rotatedFrom string, userAgent string) (MockUser, TokenPair, error) {
+func (s *Service) issueSession(ctx context.Context, user User, rotatedFrom string, userAgent string) (User, TokenPair, error) {
 	accessToken, err := s.generateAccessToken(user)
 	if err != nil {
-		return MockUser{}, TokenPair{}, err
+		return User{}, TokenPair{}, err
 	}
 
 	refreshToken, err := generateOpaqueToken()
 	if err != nil {
-		return MockUser{}, TokenPair{}, err
+		return User{}, TokenPair{}, err
 	}
 
 	refreshSession := RefreshSession{
@@ -224,7 +266,7 @@ func (s *Service) issueSession(ctx context.Context, user MockUser, rotatedFrom s
 		UserAgent:   userAgent,
 	}
 	if err := s.sessionStore.SaveRefreshSession(ctx, refreshToken, refreshSession, s.refreshTTL); err != nil {
-		return MockUser{}, TokenPair{}, err
+		return User{}, TokenPair{}, err
 	}
 
 	return user, TokenPair{
@@ -233,7 +275,7 @@ func (s *Service) issueSession(ctx context.Context, user MockUser, rotatedFrom s
 	}, nil
 }
 
-func (s *Service) generateAccessToken(user MockUser) (string, error) {
+func (s *Service) generateAccessToken(user User) (string, error) {
 	claims := AccessTokenClaims{
 		Email: user.Email,
 		Name:  user.Name,
@@ -246,6 +288,19 @@ func (s *Service) generateAccessToken(user MockUser) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(s.jwtSecret)
+}
+
+func HashPassword(password string) (string, error) {
+	encoded, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+
+	return string(encoded), nil
+}
+
+func ComparePassword(encodedPassword string, password string) error {
+	return bcrypt.CompareHashAndPassword([]byte(encodedPassword), []byte(password))
 }
 
 func generateOpaqueToken() (string, error) {

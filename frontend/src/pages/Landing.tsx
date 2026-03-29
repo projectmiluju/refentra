@@ -45,8 +45,11 @@ const Landing: React.FC = () => (
           <a href="#preview">
             <Button variant="ghost">Preview</Button>
           </a>
-          <Link to={DEMO_LOGIN_PATH}>
-            <Button>{LANDING_TEXT.primaryAction}</Button>
+          <Link to="/login">
+            <Button variant="ghost">{LANDING_TEXT.headerSecondaryAction}</Button>
+          </Link>
+          <Link to="/signup">
+            <Button>{LANDING_TEXT.headerAction}</Button>
           </Link>
         </div>
       </div>
@@ -67,11 +70,11 @@ const Landing: React.FC = () => (
               <Link to={DEMO_LOGIN_PATH}>
                 <Button size="lg">{LANDING_TEXT.primaryAction}</Button>
               </Link>
-              <a href="#preview">
+              <Link to="/signup">
                 <Button variant="ghost" size="lg">
                   {LANDING_TEXT.secondaryAction}
                 </Button>
-              </a>
+              </Link>
             </div>
           </div>
 

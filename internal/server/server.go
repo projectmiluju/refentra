@@ -34,10 +34,10 @@ func NewServer(db *gorm.DB, redisClient *redis.Client, authService *authsession.
 		AllowCredentials: securityConfig.CORSAllowCredentials,
 	}))
 	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
-		XSSProtection:       "1; mode=block",
-		ContentTypeNosniff:  "nosniff",
-		XFrameOptions:       "DENY",
-		HSTSMaxAge:          hstsMaxAge(securityConfig.EnableHSTS),
+		XSSProtection:         "1; mode=block",
+		ContentTypeNosniff:    "nosniff",
+		XFrameOptions:         "DENY",
+		HSTSMaxAge:            hstsMaxAge(securityConfig.EnableHSTS),
 		HSTSExcludeSubdomains: false,
 		ContentSecurityPolicy: securityConfig.ContentSecurityPolicy,
 	}))
@@ -71,6 +71,7 @@ func NewServer(db *gorm.DB, redisClient *redis.Client, authService *authsession.
 		},
 	}))
 	api.GET("/health", healthHandler.GetStatus)
+	api.POST("/auth/signup", authHandler.Signup)
 	api.POST("/auth/login", authHandler.Login)
 	api.POST("/auth/refresh", authHandler.Refresh)
 	api.POST("/auth/logout", authHandler.Logout)

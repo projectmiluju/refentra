@@ -60,11 +60,12 @@ const RequireAuth: React.FC<{ authenticated: boolean; children: React.ReactEleme
 };
 
 const LoginRoute: React.FC<{
+  mode?: 'login' | 'signup';
   authenticated: boolean;
   sessionMessage: string;
   fallbackRedirectTo?: string;
   onLoginSuccess: () => void;
-}> = ({ authenticated, sessionMessage, fallbackRedirectTo, onLoginSuccess }) => {
+}> = ({ mode = 'login', authenticated, sessionMessage, fallbackRedirectTo, onLoginSuccess }) => {
   const location = useLocation();
   const redirectTo = (() => {
     const state = location.state as LoginLocationState | null;
@@ -87,6 +88,7 @@ const LoginRoute: React.FC<{
 
   return (
     <Login
+      mode={mode}
       sessionMessage={sessionMessage}
       redirectTo={redirectTo}
       onLoginSuccess={onLoginSuccess}
@@ -203,6 +205,34 @@ const AppShell: React.FC = () => {
 
     return (
       <LoginRoute
+        mode="login"
+        authenticated={authStatus === 'authenticated'}
+        sessionMessage={sessionMessage}
+        fallbackRedirectTo={initialDashboardRedirect}
+        onLoginSuccess={() => {
+          setSessionMessage('');
+          setAuthStatus('authenticated');
+        }}
+      />
+    );
+  };
+
+  const renderSignupElement = (): React.ReactElement => {
+    if (bootStatus === 'checking') {
+      return <BootingScreen />;
+    }
+
+    if (bootStatus === 'unavailable') {
+      return <SetupGuide message={setupMessage} setupSteps={setupSteps} />;
+    }
+
+    if (authStatus === 'checking') {
+      return <AuthCheckingScreen />;
+    }
+
+    return (
+      <LoginRoute
+        mode="signup"
         authenticated={authStatus === 'authenticated'}
         sessionMessage={sessionMessage}
         fallbackRedirectTo={initialDashboardRedirect}
@@ -267,6 +297,7 @@ const AppShell: React.FC = () => {
   return (
     <Routes>
       <Route path="/login" element={renderLoginElement()} />
+      <Route path="/signup" element={renderSignupElement()} />
       <Route path="/dashboard" element={renderDashboardElement()} />
       <Route path="/" element={renderRootElement()} />
     </Routes>

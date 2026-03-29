@@ -14,17 +14,30 @@ import (
 )
 
 func newTestAuthHandler() *AuthHandler {
-	service := authsession.NewService(authsession.NewMemorySessionStore(), authsession.Config{
-		JWTSecret:         "test-secret",
-		AccessTTL:         15 * time.Minute,
-		RefreshTTL:        24 * time.Hour,
-		AccessCookieName:  "refentra_access_token",
-		RefreshCookieName: "refentra_refresh_token",
-		CookieSecure:      false,
-		CookieSameSite:    http.SameSiteLaxMode,
-		MockEmail:         "dev@refentra.com",
-		MockPassword:      "password123",
-	})
+	passwordHash, err := authsession.HashPassword("password123")
+	if err != nil {
+		panic(err)
+	}
+
+	service := authsession.NewService(
+		authsession.NewMemorySessionStore(),
+		authsession.NewMemoryUserStore(authsession.StoredUser{
+			User: authsession.User{
+				ID:    "user-1234",
+				Name:  "Kim Dev",
+				Email: "dev@refentra.com",
+			},
+			PasswordHash: passwordHash,
+		}),
+		authsession.Config{
+			JWTSecret:         "test-secret",
+			AccessTTL:         15 * time.Minute,
+			RefreshTTL:        24 * time.Hour,
+			AccessCookieName:  "refentra_access_token",
+			RefreshCookieName: "refentra_refresh_token",
+			CookieSecure:      false,
+			CookieSameSite:    http.SameSiteLaxMode,
+		})
 
 	return &AuthHandler{Service: service}
 }
@@ -52,7 +65,7 @@ func TestLoginReturnsUserAndSetsCookies(t *testing.T) {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
 
-	if responseBody["id"] != "user-1234" || responseBody["email"] != "dev@refentra.com" || responseBody["name"] != "김개발" {
+	if responseBody["id"] != "user-1234" || responseBody["email"] != "dev@refentra.com" || responseBody["name"] != "Kim Dev" {
 		t.Fatalf("unexpected body: %#v", responseBody)
 	}
 
@@ -93,5 +106,75 @@ func TestRefreshWithoutCookieReturnsAuthRequired(t *testing.T) {
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected status 401, got %d", rec.Code)
+	}
+}
+
+func TestSignupCreatesUserAndSetsCookies(t *testing.T) {
+	e := echo.New()
+	body := bytes.NewBufferString(`{"name":"New User","email":"new@refentra.com","password":"password123"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/signup", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+
+	handler := newTestAuthHandler()
+
+	if err := handler.Signup(ctx); err != nil {
+		t.Fatalf("Signup returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected status 201, got %d", rec.Code)
+	}
+
+	var responseBody map[string]string
+	if err := json.Unmarshal(rec.Body.Bytes(), &responseBody); err != nil {
+		t.Fatalf("failed to decode response body: %v", err)
+	}
+
+	if responseBody["email"] != "new@refentra.com" || responseBody["name"] != "New User" {
+		t.Fatalf("unexpected body: %#v", responseBody)
+	}
+
+	if len(rec.Result().Cookies()) != 2 {
+		t.Fatalf("expected 2 auth cookies, got %d", len(rec.Result().Cookies()))
+	}
+}
+
+func TestSignupRejectsDuplicateEmail(t *testing.T) {
+	e := echo.New()
+	body := bytes.NewBufferString(`{"name":"Kim Dev","email":"dev@refentra.com","password":"password123"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/signup", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+
+	handler := newTestAuthHandler()
+
+	if err := handler.Signup(ctx); err != nil {
+		t.Fatalf("Signup returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected status 409, got %d", rec.Code)
+	}
+}
+
+func TestSignupRejectsShortPassword(t *testing.T) {
+	e := echo.New()
+	body := bytes.NewBufferString(`{"name":"New User","email":"new@refentra.com","password":"short"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/signup", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+
+	handler := newTestAuthHandler()
+
+	if err := handler.Signup(ctx); err != nil {
+		t.Fatalf("Signup returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", rec.Code)
 	}
 }
