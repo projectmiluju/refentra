@@ -558,4 +558,206 @@ describe('Dashboard', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('This reference already exists in the demo library.');
   });
+
+  it('제품 모드에서는 레퍼런스를 삭제하고 undo 배너를 표시해야 한다', async () => {
+    const user = userEvent.setup();
+
+    fetchMock
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([
+        {
+          id: 'ref-1',
+          title: '삭제할 문서',
+          url: 'https://example.com/delete-me',
+          description: '설명',
+          tags: ['React'],
+          uploader_id: 'user-1234',
+          created_at: '2026-03-26T00:00:00Z',
+        },
+      ], {
+        total_count: 1,
+        total_pages: 1,
+        available_tags: ['React'],
+      })))
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+        json: async () => ({}),
+      })
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([], {
+        total_count: 0,
+        total_pages: 0,
+        available_tags: ['React'],
+      })));
+
+    renderDashboard();
+
+    await screen.findByText('삭제할 문서');
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Delete now' }));
+
+    expect(await screen.findByText('Removed "삭제할 문서" from the list. You can restore it within 24 hours.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undo delete' })).toBeInTheDocument();
+    expect(fetchMock.mock.calls[1]?.[0]).toContain('/api/v1/references/ref-1');
+  });
+
+  it('undo를 누르면 복구 API를 호출하고 성공 메시지를 표시해야 한다', async () => {
+    const user = userEvent.setup();
+
+    fetchMock
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([
+        {
+          id: 'ref-1',
+          title: '복구할 문서',
+          url: 'https://example.com/restore-me',
+          description: '설명',
+          tags: ['React'],
+          uploader_id: 'user-1234',
+          created_at: '2026-03-26T00:00:00Z',
+        },
+      ], {
+        total_count: 1,
+        total_pages: 1,
+        available_tags: ['React'],
+      })))
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+        json: async () => ({}),
+      })
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([], {
+        total_count: 0,
+        total_pages: 0,
+        available_tags: ['React'],
+      })))
+      .mockResolvedValueOnce(createFetchResponse({
+        id: 'ref-1',
+        title: '복구할 문서',
+        url: 'https://example.com/restore-me',
+        description: '설명',
+        tags: ['React'],
+        uploader_id: 'user-1234',
+        created_at: '2026-03-26T00:00:00Z',
+      }))
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([
+        {
+          id: 'ref-1',
+          title: '복구할 문서',
+          url: 'https://example.com/restore-me',
+          description: '설명',
+          tags: ['React'],
+          uploader_id: 'user-1234',
+          created_at: '2026-03-26T00:00:00Z',
+        },
+      ], {
+        total_count: 1,
+        total_pages: 1,
+        available_tags: ['React'],
+      })));
+
+    renderDashboard();
+
+    await screen.findByText('복구할 문서');
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Delete now' }));
+    await user.click(await screen.findByRole('button', { name: 'Undo delete' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The reference returned to the product library.');
+    expect(fetchMock.mock.calls[3]?.[0]).toContain('/api/v1/references/ref-1/restore');
+  });
+
+  it('삭제 API가 실패하면 기존 목록을 유지하고 에러를 표시해야 한다', async () => {
+    const user = userEvent.setup();
+
+    fetchMock
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([
+        {
+          id: 'ref-1',
+          title: '삭제 실패 문서',
+          url: 'https://example.com/delete-error',
+          description: '설명',
+          tags: ['React'],
+          uploader_id: 'user-1234',
+          created_at: '2026-03-26T00:00:00Z',
+        },
+      ], {
+        total_count: 1,
+        total_pages: 1,
+        available_tags: ['React'],
+      })))
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'Delete failed on the server' }),
+      });
+
+    renderDashboard();
+
+    await screen.findByText('삭제 실패 문서');
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Delete now' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Delete failed on the server');
+    expect(screen.getByText('삭제 실패 문서')).toBeInTheDocument();
+  });
+
+  it('포트폴리오 모드에서는 삭제 액션을 노출하지 않아야 한다', async () => {
+    renderDashboard('/dashboard?mode=portfolio');
+
+    await screen.findByText('Search systems for high-density product teams');
+
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+  });
+
+  it('삭제 후 현재 페이지가 비면 1페이지로 보정해야 한다', async () => {
+    const user = userEvent.setup();
+
+    fetchMock
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([
+        {
+          id: 'ref-2',
+          title: '두 번째 페이지 문서',
+          url: 'https://example.com/page-2',
+          description: '설명',
+          tags: ['React'],
+          uploader_id: 'user-1234',
+          created_at: '2026-03-25T00:00:00Z',
+        },
+      ], {
+        page: 2,
+        total_count: 11,
+        total_pages: 2,
+        available_tags: ['React'],
+      })))
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+        json: async () => ({}),
+      })
+      .mockResolvedValueOnce(createFetchResponse(createListResponse([
+        {
+          id: 'ref-1',
+          title: '첫 페이지 문서',
+          url: 'https://example.com/page-1',
+          description: '설명',
+          tags: ['React'],
+          uploader_id: 'user-1234',
+          created_at: '2026-03-26T00:00:00Z',
+        },
+      ], {
+        page: 1,
+        total_count: 10,
+        total_pages: 1,
+        available_tags: ['React'],
+      })));
+
+    renderDashboard('/dashboard?page=2');
+
+    await screen.findByText('두 번째 페이지 문서');
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Delete now' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-display')).toHaveTextContent('/dashboard');
+    });
+  });
 });

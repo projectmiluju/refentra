@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Trash2 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -7,7 +7,7 @@ import TagBadge from '../components/common/TagBadge';
 import AddReferenceModal from '../components/modal/AddReferenceModal';
 import { DASHBOARD_TEXT } from '../constants/uiText';
 import type { DashboardMode, ReferenceDraft, ReferenceItem, ReferenceListQuery } from '../types/reference';
-import { createReference, fetchReferences } from '../lib/references';
+import { createReference, deleteReference, fetchReferences, restoreReference } from '../lib/references';
 import {
   DEFAULT_DASHBOARD_MODE,
   PORTFOLIO_DASHBOARD_MODE,
@@ -23,6 +23,16 @@ interface DashboardProps {
 const REFERENCE_PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 300;
 
+interface RestoreFeedback {
+  id: string;
+  title: string;
+}
+
+interface ActionFeedback {
+  tone: 'success' | 'error';
+  message: string;
+}
+
 const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -32,10 +42,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [pageNotice, setPageNotice] = useState('');
+  const [actionFeedback, setActionFeedback] = useState<ActionFeedback | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [lastValidPage, setLastValidPage] = useState<number | null>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [deletingReferenceId, setDeletingReferenceId] = useState<string | null>(null);
+  const [restoringReferenceId, setRestoringReferenceId] = useState<string | null>(null);
+  const [restoreFeedback, setRestoreFeedback] = useState<RestoreFeedback | null>(null);
   const { search: searchQuery, tags: selectedTags, page: currentPage, invalidPage, mode } = parseDashboardSearchParams(
     new URLSearchParams(location.search),
   );
@@ -163,6 +178,59 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
     await loadReferences({ page: 1 });
   };
 
+  const handleDeleteReference = async (reference: ReferenceItem): Promise<void> => {
+    const nextPage = references.length === 1 && currentPage > 1 ? Math.max(1, currentPage - 1) : currentPage;
+
+    try {
+      setDeletingReferenceId(reference.id);
+      setActionFeedback(null);
+      await deleteReference(reference.id);
+      setConfirmingDeleteId(null);
+      setRestoreFeedback({ id: reference.id, title: reference.title });
+
+      if (nextPage !== currentPage) {
+        updateDashboardQuery({ page: nextPage }, { replace: true });
+        return;
+      }
+
+      await loadReferences();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : DASHBOARD_TEXT.deleteErrorFallback;
+      setActionFeedback({ tone: 'error', message });
+    } finally {
+      setDeletingReferenceId(null);
+    }
+  };
+
+  const handleRestoreReference = async (): Promise<void> => {
+    if (!restoreFeedback) {
+      return;
+    }
+
+    try {
+      setRestoringReferenceId(restoreFeedback.id);
+      setActionFeedback(null);
+      const restored = await restoreReference(restoreFeedback.id);
+      setRestoreFeedback(null);
+      await loadReferences();
+
+      const normalizedSearch = searchQuery.trim().toLowerCase();
+      const matchesSearch = normalizedSearch.length === 0
+        || [restored.title, restored.description, restored.url].some((field) => field.toLowerCase().includes(normalizedSearch));
+      const matchesTags = selectedTags.length === 0 || selectedTags.every((tag) => restored.tags.includes(tag));
+
+      setActionFeedback({
+        tone: 'success',
+        message: matchesSearch && matchesTags ? DASHBOARD_TEXT.restoreSuccess : DASHBOARD_TEXT.restoreHiddenByFilter,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : DASHBOARD_TEXT.restoreErrorFallback;
+      setActionFeedback({ tone: 'error', message });
+    } finally {
+      setRestoringReferenceId(null);
+    }
+  };
+
   const handleLogout = async (): Promise<void> => {
     try {
       setIsLoggingOut(true);
@@ -175,10 +243,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
   const handleSearchChange = (value: string): void => {
     setSearchInput(value);
     setPageNotice('');
+    setActionFeedback(null);
   };
 
   const handleToggleTag = (tag: string): void => {
     setPageNotice('');
+    setActionFeedback(null);
     const hasTag = selectedTags.includes(tag);
     const nextTags = hasTag
       ? selectedTags.filter((currentTag) => currentTag !== tag)
@@ -188,13 +258,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
 
   const handleClearFilters = (): void => {
     setPageNotice('');
+    setActionFeedback(null);
     setSearchInput('');
     updateDashboardQuery({ search: '', tags: [], page: 1 });
   };
 
   const handleSwitchMode = (nextMode: DashboardMode): void => {
     setPageNotice('');
+    setActionFeedback(null);
     setSearchInput('');
+    setRestoreFeedback(null);
+    setConfirmingDeleteId(null);
     updateDashboardQuery({ search: '', tags: [], page: 1, mode: nextMode });
   };
 
@@ -274,6 +348,46 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
                       {ref.url}
                     </a>
                     <p className="mt-2 text-sm leading-6 text-text-muted">{ref.description || '-'}</p>
+                    {!isPortfolioMode ? (
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        {confirmingDeleteId === ref.id ? (
+                          <>
+                            <p className="text-xs leading-6 text-text-muted">{DASHBOARD_TEXT.deleteConfirmDescription}</p>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              disabled={deletingReferenceId === ref.id}
+                              onClick={() => setConfirmingDeleteId(null)}
+                            >
+                              {DASHBOARD_TEXT.deleteCancel}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              isLoading={deletingReferenceId === ref.id}
+                              onClick={() => { void handleDeleteReference(ref); }}
+                            >
+                              {deletingReferenceId === ref.id ? DASHBOARD_TEXT.deleting : DASHBOARD_TEXT.deleteConfirm}
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="gap-1"
+                            onClick={() => {
+                              setActionFeedback(null);
+                              setConfirmingDeleteId(ref.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            {DASHBOARD_TEXT.deleteAction}
+                          </Button>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {ref.tags.map((tag) => <TagBadge key={tag} label={tag} />)}
@@ -410,6 +524,36 @@ const Dashboard: React.FC<DashboardProps> = ({ onLoggedOut }) => {
         </aside>
 
         <main className="space-y-4">
+          {restoreFeedback ? (
+            <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-surface px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+              <p className="text-sm text-sys-text">
+                {`${DASHBOARD_TEXT.deleteSuccessPrefix} "${restoreFeedback.title}" ${DASHBOARD_TEXT.deleteSuccessSuffix}`}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                isLoading={restoringReferenceId === restoreFeedback.id}
+                onClick={() => { void handleRestoreReference(); }}
+              >
+                {restoringReferenceId === restoreFeedback.id ? DASHBOARD_TEXT.restoring : DASHBOARD_TEXT.restoreAction}
+              </Button>
+            </div>
+          ) : null}
+
+          {actionFeedback ? (
+            <div className={actionFeedback.tone === 'error'
+              ? 'rounded-xl border border-error/40 bg-surface px-4 py-4'
+              : 'rounded-xl border border-border/70 bg-surface px-4 py-4'}>
+              <p
+                role="alert"
+                className={actionFeedback.tone === 'error' ? 'text-sm text-error' : 'text-sm text-sys-text'}
+              >
+                {actionFeedback.message}
+              </p>
+            </div>
+          ) : null}
+
           {pageNotice ? (
             <div className="rounded-xl border border-error/40 bg-surface px-4 py-4">
               <p className="text-sm text-error" role="alert">
