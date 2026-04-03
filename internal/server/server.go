@@ -80,6 +80,8 @@ func NewServer(db *gorm.DB, redisClient *redis.Client, authService *authsession.
 	protected := api.Group("", authsession.RequireAuthenticatedUser(authService))
 	protected.GET("/references", refHandler.GetReferences)
 	protected.POST("/references", refHandler.CreateReference)
+	protected.DELETE("/references/:id", refHandler.DeleteReference)
+	protected.POST("/references/:id/restore", refHandler.RestoreReference)
 
 	// Sub FS for embedded Vite build is injected from main
 	if distFs != nil {
