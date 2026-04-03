@@ -101,3 +101,26 @@ export const createReference = async (draft: ReferenceDraft): Promise<ReferenceI
   const reference = (await response.json()) as ReferenceResponse;
   return mapReferenceResponse(reference);
 };
+
+export const deleteReference = async (id: string): Promise<void> => {
+  const response = await fetchWithAuth(`${REFERENCE_API_PATH}/${id}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error(await toErrorMessage(response, 'Failed to delete the reference.'));
+  }
+};
+
+export const restoreReference = async (id: string): Promise<ReferenceItem> => {
+  const response = await fetchWithAuth(`${REFERENCE_API_PATH}/${id}/restore`, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    throw new Error(await toErrorMessage(response, 'Failed to restore the reference.'));
+  }
+
+  const reference = (await response.json()) as ReferenceResponse;
+  return mapReferenceResponse(reference);
+};

@@ -107,6 +107,19 @@ export const DASHBOARD_TEXT = {
   loadErrorFallback: 'Failed to load references.',
   paginationLabel: 'Pagination',
   invalidPageFallback: 'The requested page was not available, so the list returned to the previous page.',
+  deleteAction: 'Delete',
+  deleteConfirmDescription: 'The item will leave the list now, but you can restore it within 24 hours.',
+  deleteCancel: 'Keep it',
+  deleteConfirm: 'Delete now',
+  deleting: 'Deleting...',
+  restoreAction: 'Undo delete',
+  restoring: 'Restoring...',
+  deleteSuccessPrefix: 'Removed',
+  deleteSuccessSuffix: 'from the list. You can restore it within 24 hours.',
+  restoreSuccess: 'The reference returned to the product library.',
+  restoreHiddenByFilter: 'The reference was restored, but it may stay hidden under the current search or filter state.',
+  deleteErrorFallback: 'Failed to delete the reference.',
+  restoreErrorFallback: 'Failed to restore the reference.',
 } as const;
 
 export const REFERENCE_MODAL_TEXT = {
