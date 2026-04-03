@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 
 	authsession "refentra/internal/auth"
 	"refentra/internal/models"
@@ -16,10 +17,16 @@ import (
 )
 
 type fakeReferenceCreateStore struct {
-	existing  *models.Reference
-	findError error
-	saveError error
-	savedRef  *models.Reference
+	existing      *models.Reference
+	findError     error
+	saveError     error
+	savedRef      *models.Reference
+	ownedRef      *models.Reference
+	deleteErr     error
+	restoreErr    error
+	deletedBy     string
+	restoreUntil  time.Time
+	restoreCalled bool
 }
 
 func (s *fakeReferenceCreateStore) FindDuplicateReference(string, string, string) (*models.Reference, error) {
@@ -40,6 +47,43 @@ func (s *fakeReferenceCreateStore) CreateReference(ref *models.Reference) error 
 	}
 
 	s.savedRef = ref
+	return nil
+}
+
+func (s *fakeReferenceCreateStore) FindReferenceForOwner(string, string, bool) (*models.Reference, error) {
+	if s.findError != nil {
+		return nil, s.findError
+	}
+
+	if s.ownedRef == nil {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	return s.ownedRef, nil
+}
+
+func (s *fakeReferenceCreateStore) SoftDeleteReference(ref *models.Reference, deletedBy string, restoreUntil time.Time) error {
+	if s.deleteErr != nil {
+		return s.deleteErr
+	}
+
+	s.deletedBy = deletedBy
+	s.restoreUntil = restoreUntil
+	ref.DeletedAt = gorm.DeletedAt{Time: time.Now().UTC(), Valid: true}
+	ref.DeletedBy = &deletedBy
+	ref.RestoreUntil = &restoreUntil
+	return nil
+}
+
+func (s *fakeReferenceCreateStore) RestoreReference(ref *models.Reference) error {
+	if s.restoreErr != nil {
+		return s.restoreErr
+	}
+
+	s.restoreCalled = true
+	ref.DeletedAt = gorm.DeletedAt{}
+	ref.DeletedBy = nil
+	ref.RestoreUntil = nil
 	return nil
 }
 
@@ -267,5 +311,261 @@ func TestNormalizeReferenceTagsSupportsRepeatedQueryValues(t *testing.T) {
 	expected := []string{"Go", "Frontend", "React"}
 	if !reflect.DeepEqual(tags, expected) {
 		t.Fatalf("expected tags %v, got %v", expected, tags)
+	}
+}
+
+func TestDeleteReferenceWithoutAuthenticationReturnsUnauthorized(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/references/ref-1", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/references/:id")
+	ctx.SetParamNames("id")
+	ctx.SetParamValues("ref-1")
+
+	handler := &ReferenceHandler{}
+
+	if err := handler.DeleteReference(ctx); err != nil {
+		t.Fatalf("DeleteReference returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status 401, got %d", rec.Code)
+	}
+}
+
+func TestDeleteReferenceSoftDeletesOwnedReference(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/references/ref-1", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/references/:id")
+	ctx.SetParamNames("id")
+	ctx.SetParamValues("ref-1")
+	ctx.Set(authsession.ContextUserIDKey, "user-1234")
+
+	store := &fakeReferenceCreateStore{
+		ownedRef: &models.Reference{UploaderID: "user-1234"},
+	}
+	handler := &ReferenceHandler{
+		DB:          &gorm.DB{},
+		createStore: store,
+	}
+
+	if err := handler.DeleteReference(ctx); err != nil {
+		t.Fatalf("DeleteReference returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("expected status 204, got %d", rec.Code)
+	}
+
+	if store.deletedBy != "user-1234" {
+		t.Fatalf("expected deletedBy user-1234, got %q", store.deletedBy)
+	}
+
+	if store.restoreUntil.IsZero() {
+		t.Fatal("expected restoreUntil to be set")
+	}
+}
+
+func TestDeleteReferenceReturnsNotFoundWhenReferenceIsMissing(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/references/ref-1", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/references/:id")
+	ctx.SetParamNames("id")
+	ctx.SetParamValues("ref-1")
+	ctx.Set(authsession.ContextUserIDKey, "user-1234")
+
+	handler := &ReferenceHandler{
+		DB:          &gorm.DB{},
+		createStore: &fakeReferenceCreateStore{},
+	}
+
+	if err := handler.DeleteReference(ctx); err != nil {
+		t.Fatalf("DeleteReference returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", rec.Code)
+	}
+}
+
+func TestDeleteReferenceIsIdempotentForAlreadyDeletedReference(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/references/ref-1", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/references/:id")
+	ctx.SetParamNames("id")
+	ctx.SetParamValues("ref-1")
+	ctx.Set(authsession.ContextUserIDKey, "user-1234")
+
+	store := &fakeReferenceCreateStore{
+		ownedRef: &models.Reference{
+			UploaderID: "user-1234",
+			DeletedAt:  gorm.DeletedAt{Time: time.Now().UTC(), Valid: true},
+		},
+	}
+	handler := &ReferenceHandler{
+		DB:          &gorm.DB{},
+		createStore: store,
+	}
+
+	if err := handler.DeleteReference(ctx); err != nil {
+		t.Fatalf("DeleteReference returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("expected status 204, got %d", rec.Code)
+	}
+
+	if !store.restoreUntil.IsZero() {
+		t.Fatal("expected idempotent delete to skip soft delete call")
+	}
+}
+
+func TestRestoreReferenceRestoresOwnedReferenceWithinWindow(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/references/ref-1/restore", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/references/:id/restore")
+	ctx.SetParamNames("id")
+	ctx.SetParamValues("ref-1")
+	ctx.Set(authsession.ContextUserIDKey, "user-1234")
+
+	restoreUntil := time.Now().UTC().Add(time.Hour)
+	deletedBy := "user-1234"
+	store := &fakeReferenceCreateStore{
+		ownedRef: &models.Reference{
+			UploaderID:   "user-1234",
+			DeletedAt:    gorm.DeletedAt{Time: time.Now().UTC(), Valid: true},
+			DeletedBy:    &deletedBy,
+			RestoreUntil: &restoreUntil,
+		},
+	}
+	handler := &ReferenceHandler{
+		DB:          &gorm.DB{},
+		createStore: store,
+	}
+
+	if err := handler.RestoreReference(ctx); err != nil {
+		t.Fatalf("RestoreReference returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+
+	if !store.restoreCalled {
+		t.Fatal("expected restore to be called")
+	}
+}
+
+func TestRestoreReferenceWithoutAuthenticationReturnsUnauthorized(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/references/ref-1/restore", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/references/:id/restore")
+	ctx.SetParamNames("id")
+	ctx.SetParamValues("ref-1")
+
+	handler := &ReferenceHandler{}
+
+	if err := handler.RestoreReference(ctx); err != nil {
+		t.Fatalf("RestoreReference returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status 401, got %d", rec.Code)
+	}
+}
+
+func TestRestoreReferenceReturnsConflictWhenReferenceIsNotDeleted(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/references/ref-1/restore", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/references/:id/restore")
+	ctx.SetParamNames("id")
+	ctx.SetParamValues("ref-1")
+	ctx.Set(authsession.ContextUserIDKey, "user-1234")
+
+	store := &fakeReferenceCreateStore{
+		ownedRef: &models.Reference{
+			UploaderID: "user-1234",
+		},
+	}
+	handler := &ReferenceHandler{
+		DB:          &gorm.DB{},
+		createStore: store,
+	}
+
+	if err := handler.RestoreReference(ctx); err != nil {
+		t.Fatalf("RestoreReference returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected status 409, got %d", rec.Code)
+	}
+}
+
+func TestRestoreReferenceReturnsGoneWhenWindowExpired(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/references/ref-1/restore", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/references/:id/restore")
+	ctx.SetParamNames("id")
+	ctx.SetParamValues("ref-1")
+	ctx.Set(authsession.ContextUserIDKey, "user-1234")
+
+	restoreUntil := time.Now().UTC().Add(-time.Hour)
+	store := &fakeReferenceCreateStore{
+		ownedRef: &models.Reference{
+			UploaderID:   "user-1234",
+			DeletedAt:    gorm.DeletedAt{Time: time.Now().UTC(), Valid: true},
+			RestoreUntil: &restoreUntil,
+		},
+	}
+	handler := &ReferenceHandler{
+		DB:          &gorm.DB{},
+		createStore: store,
+	}
+
+	if err := handler.RestoreReference(ctx); err != nil {
+		t.Fatalf("RestoreReference returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusGone {
+		t.Fatalf("expected status 410, got %d", rec.Code)
+	}
+}
+
+func TestRestoreReferenceReturnsNotFoundWhenReferenceIsMissing(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/references/ref-1/restore", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/references/:id/restore")
+	ctx.SetParamNames("id")
+	ctx.SetParamValues("ref-1")
+	ctx.Set(authsession.ContextUserIDKey, "user-1234")
+
+	handler := &ReferenceHandler{
+		DB:          &gorm.DB{},
+		createStore: &fakeReferenceCreateStore{},
+	}
+
+	if err := handler.RestoreReference(ctx); err != nil {
+		t.Fatalf("RestoreReference returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", rec.Code)
 	}
 }

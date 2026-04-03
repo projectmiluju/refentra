@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	authsession "refentra/internal/auth"
 	"refentra/internal/models"
@@ -29,14 +30,18 @@ type ReferenceListResponse struct {
 }
 
 const (
-	defaultReferencePage  = 1
-	defaultReferenceLimit = 10
-	maxReferenceLimit     = 50
+	defaultReferencePage   = 1
+	defaultReferenceLimit  = 10
+	maxReferenceLimit      = 50
+	referenceRestoreWindow = 24 * time.Hour
 )
 
 type referenceCreateStore interface {
 	FindDuplicateReference(uploaderID, url, title string) (*models.Reference, error)
 	CreateReference(ref *models.Reference) error
+	FindReferenceForOwner(id, ownerID string, includeDeleted bool) (*models.Reference, error)
+	SoftDeleteReference(ref *models.Reference, deletedBy string, restoreUntil time.Time) error
+	RestoreReference(ref *models.Reference) error
 }
 
 type gormReferenceCreateStore struct {
@@ -58,6 +63,46 @@ func (s gormReferenceCreateStore) FindDuplicateReference(uploaderID, url, title 
 
 func (s gormReferenceCreateStore) CreateReference(ref *models.Reference) error {
 	return s.db.Create(ref).Error
+}
+
+func (s gormReferenceCreateStore) FindReferenceForOwner(id, ownerID string, includeDeleted bool) (*models.Reference, error) {
+	query := s.db
+	if includeDeleted {
+		query = query.Unscoped()
+	}
+
+	var ref models.Reference
+	err := query.
+		Where("id = ? AND uploader_id = ?", id, ownerID).
+		First(&ref).
+		Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &ref, nil
+}
+
+func (s gormReferenceCreateStore) SoftDeleteReference(ref *models.Reference, deletedBy string, restoreUntil time.Time) error {
+	ref.DeletedBy = &deletedBy
+	ref.RestoreUntil = &restoreUntil
+
+	return s.db.Delete(ref).Error
+}
+
+func (s gormReferenceCreateStore) RestoreReference(ref *models.Reference) error {
+	ref.DeletedAt = gorm.DeletedAt{}
+	ref.DeletedBy = nil
+	ref.RestoreUntil = nil
+
+	return s.db.Unscoped().
+		Model(ref).
+		Updates(map[string]interface{}{
+			"deleted_at":    nil,
+			"deleted_by":    nil,
+			"restore_until": nil,
+		}).
+		Error
 }
 
 func (h *ReferenceHandler) getReferenceCreateStore() (referenceCreateStore, error) {
@@ -257,4 +302,82 @@ func (h *ReferenceHandler) CreateReference(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, ref)
+}
+
+func (h *ReferenceHandler) DeleteReference(c echo.Context) error {
+	userID, ok := c.Get(authsession.ContextUserIDKey).(string)
+	if !ok || userID == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Authentication required"})
+	}
+
+	if h.DB == nil {
+		return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "Database connection is unavailable"})
+	}
+
+	store, err := h.getReferenceCreateStore()
+	if err != nil {
+		return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "Database connection is unavailable"})
+	}
+
+	refID := strings.TrimSpace(c.Param("id"))
+	ref, err := store.FindReferenceForOwner(refID, userID, true)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "Reference not found"})
+	}
+	if err != nil {
+		c.Logger().Errorf("failed to load reference for delete: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete reference"})
+	}
+
+	if ref.DeletedAt.Valid {
+		return c.NoContent(http.StatusNoContent)
+	}
+
+	if err := store.SoftDeleteReference(ref, userID, time.Now().UTC().Add(referenceRestoreWindow)); err != nil {
+		c.Logger().Errorf("failed to delete reference: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete reference"})
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
+func (h *ReferenceHandler) RestoreReference(c echo.Context) error {
+	userID, ok := c.Get(authsession.ContextUserIDKey).(string)
+	if !ok || userID == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Authentication required"})
+	}
+
+	if h.DB == nil {
+		return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "Database connection is unavailable"})
+	}
+
+	store, err := h.getReferenceCreateStore()
+	if err != nil {
+		return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "Database connection is unavailable"})
+	}
+
+	refID := strings.TrimSpace(c.Param("id"))
+	ref, err := store.FindReferenceForOwner(refID, userID, true)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "Reference not found"})
+	}
+	if err != nil {
+		c.Logger().Errorf("failed to load reference for restore: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to restore reference"})
+	}
+
+	if !ref.DeletedAt.Valid {
+		return c.JSON(http.StatusConflict, map[string]string{"error": "Reference is not deleted"})
+	}
+
+	if ref.RestoreUntil == nil || time.Now().UTC().After(*ref.RestoreUntil) {
+		return c.JSON(http.StatusGone, map[string]string{"error": "Restore window has expired"})
+	}
+
+	if err := store.RestoreReference(ref); err != nil {
+		c.Logger().Errorf("failed to restore reference: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to restore reference"})
+	}
+
+	return c.JSON(http.StatusOK, ref)
 }
