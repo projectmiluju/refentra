@@ -87,7 +87,16 @@ func (s gormReferenceCreateStore) SoftDeleteReference(ref *models.Reference, del
 	ref.DeletedBy = &deletedBy
 	ref.RestoreUntil = &restoreUntil
 
-	return s.db.Delete(ref).Error
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(ref).Updates(map[string]interface{}{
+			"deleted_by":    deletedBy,
+			"restore_until": restoreUntil,
+		}).Error; err != nil {
+			return err
+		}
+
+		return tx.Delete(ref).Error
+	})
 }
 
 func (s gormReferenceCreateStore) RestoreReference(ref *models.Reference) error {

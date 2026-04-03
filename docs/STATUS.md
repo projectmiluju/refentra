@@ -15,6 +15,10 @@
 - 복구 성공 후에는 현재 검색/태그 조건과의 정합성에 따라 메시지를 분기하고, 삭제 후 현재 페이지가 비면 URL을 `1페이지`로 보정합니다.
 - 포트폴리오 모드에서는 삭제/복구 UI를 계속 숨겨 실제 제품 데이터 정책과 데모 모드를 분리했습니다.
 - `$qa`는 `#16`에 대해 삭제 성공, undo 복구, 삭제 실패 시 목록 유지, 포트폴리오 모드 비노출, 삭제 후 페이지 보정까지 검증했고 `APPROVED_WITH_KNOWN_ISSUES`로 승인했습니다.
+- `#17` 범위에서 Playwright 브라우저 회귀가 추가됐습니다.
+- 실제 Postgres/Redis 연결 상태에서 제품 모드 삭제 후 undo 복구, 검색 결과 `page=2` 마지막 항목 삭제 후 URL 보정이 자동 검증됩니다.
+- 이 과정에서 soft delete 시 `restore_until`이 DB에 저장되지 않아 즉시 복구가 `Restore window has expired`로 실패하던 버그가 발견됐고, 현재는 delete 전에 메타데이터를 먼저 저장하는 트랜잭션으로 수정됐습니다.
+- `$qa`는 `go test ./...`, `npm test`, `npm run typecheck`, `npm run build`, 새 Playwright spec까지 모두 재실행했고 `#17`을 `APPROVED_WITH_KNOWN_ISSUES`로 승인했습니다.
 - `main`에는 fresh DB 기준 `users.email` unique 제약 마이그레이션 충돌 수정이 반영됐습니다.
 - 원인은 Docker init SQL의 `users_email_key`와 GORM `AutoMigrate`가 기대하는 unique 제약 이름이 달랐던 것이고, 현재는 앱 시작 시 legacy 제약 이름을 정리한 뒤 마이그레이션을 수행합니다.
 - 이 수정으로 GitHub Actions `Playwright Smoke E2E`의 health check 단계에서 fresh DB가 `503`으로 멈추던 문제가 해소됐습니다.
@@ -70,7 +74,6 @@
 | `.env.example`, `docker-compose.prod.yml`에 `AUTH_MOCK_*` 레거시 환경변수가 남아 있음 | 낮음 | 정리 필요 |
 | Docker init SQL과 GORM `AutoMigrate`를 병행하는 구조라 future schema 변경 시 fresh volume 재검증이 필수임 | 낮음 | 운영 주의 |
 | `deleted_by`, `restore_until` 추가 이후 fresh DB와 기존 volume 모두에서 컬럼 정합성을 아직 별도 마이그레이션 시나리오로 검증하지 않음 | 중간 | `#15` 후속 확인 필요 |
-| 삭제/복구 UI는 구현됐지만 Playwright 수준 브라우저 회귀 테스트는 아직 없음 | 중간 | `#17` 진행 예정 |
 | `frontend/dist/.gitkeep`가 `npm run build` 후 삭제 상태로 남아 커밋/릴리즈 단계에서 잡음을 만든다 | 낮음 | 정리 필요 |
 
 ## 기술 부채
@@ -87,12 +90,10 @@
 | 비밀번호 재설정, 계정 삭제 같은 계정 관리 기능이 아직 없음 | 2026-03-29 | 1일~2일 |
 | Docker init SQL과 앱 마이그레이션의 역할 분리를 명시한 정식 migration 체계 도입 | 2026-03-29 | 1일 |
 | 레퍼런스 삭제 메타데이터 컬럼이 fresh DB / 기존 volume / AutoMigrate 조합에서 모두 안전한지 확인 | 2026-04-04 | 반나절 |
-| 삭제/복구 API 도입 후 UI undo 흐름과 브라우저 회귀 테스트까지 연결 | 2026-04-04 | 1일 |
 | `frontend/dist/.gitkeep`를 유지할지, empty dist 보장을 다른 방식으로 바꿀지 정리 | 2026-04-04 | 반나절 |
 
 ## 다음 계획
 - [ ] 포트폴리오 모드 샘플 데이터 레이어를 장기적으로 유지할지, 별도 프레젠테이션 계층으로 분리할지 결정
-- [ ] `#17` 삭제/복구 회귀 테스트 확장
 - [ ] fresh DB와 기존 volume 기준으로 `deleted_by`, `restore_until` 컬럼 마이그레이션 정합성 재검증
 - [ ] `frontend/dist/.gitkeep` 유지 전략 재정리
 - [ ] 이슈 생성 후 브랜치 생성, PR 생성까지 강제하는 작업 체크리스트를 정리

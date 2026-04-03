@@ -26,6 +26,13 @@ export const createUniqueReference = () => {
   };
 };
 
+interface CreateReferenceInput {
+  title: string;
+  url: string;
+  description: string;
+  tags?: string[];
+}
+
 const ensureDefaultUserExists = async (page: Page): Promise<void> => {
   const signupResponse = await page.request.post('/api/v1/auth/signup', {
     data: {
@@ -81,6 +88,22 @@ export const loginWithApi = async (page: Page): Promise<void> => {
     data: {
       email: LOGIN_EMAIL,
       password: LOGIN_PASSWORD,
+    },
+  });
+
+  expect(response.ok()).toBeTruthy();
+};
+
+export const createReferenceWithApi = async (
+  page: Page,
+  input: CreateReferenceInput,
+): Promise<void> => {
+  const response = await page.request.post('/api/v1/references', {
+    data: {
+      title: input.title,
+      url: input.url,
+      description: input.description,
+      tags: input.tags ?? [],
     },
   });
 
